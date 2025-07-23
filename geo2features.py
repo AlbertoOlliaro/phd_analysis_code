@@ -21,6 +21,7 @@ df = df[df["include"] > 0]
 
 # Load or initialize geonames dictionary
 DICT_GEOID_PATH = os.path.join(ANALYSIS_DIR, DICT_GEOID_FILENAME)
+
 if os.path.exists(DICT_GEOID_PATH):
     print("🔄 Loading existing GeoNames dictionary...")
     geonames_df = pd.read_excel(DICT_GEOID_PATH, sheet_name=0)
