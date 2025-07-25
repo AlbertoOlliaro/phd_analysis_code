@@ -6,17 +6,17 @@ import os
 import time
 
 # Paths
-DATA_GEONAMES_FILENAME = "1.2_ENGdata_geonamesExtra.xlsx"
+DATA_FULL_FILENAME = "1.1_ENGdata_geoID.xlsx"
 DICT_GEOID_FILENAME = "aux_geonames_ID_dictionary.xlsx"
 OUTPUT_FILE_FETCHED_LOC = "1.3_ENGdata_geonamesExtracted"
 ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/dphil excels/phd_analysis_data/"
 
-USERNAME = 'albertoolliaro'
+USERNAME = 'albertoolliaro' # for geonames API
 
 test_geonameID = 7285904
 
 # Load data and filter by 'include'
-df = pd.read_excel(os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME), sheet_name=0)
+df = pd.read_excel(os.path.join(ANALYSIS_DIR, DATA_FULL_FILENAME), sheet_name=0)
 df = df[df["include"] > 0]
 
 # Load or initialize geonames dictionary
@@ -81,7 +81,7 @@ def get_geonames_data(geo_id):
         result = query_geonames_api(geo_id_int)
         geonames_cache[geo_id_int] = result
 
-        # Save updated dictionary immediately
+        # Save the updated dictionary immediately
         pd.DataFrame.from_dict(geonames_cache, orient="index").reset_index().rename(
             columns={"index": "geonameId"}).to_excel(DICT_GEOID_PATH, index=False)
         return result
@@ -103,15 +103,16 @@ def process_all_locations():
         print(f"📍 Working on: {loc}")
         geoname_id_col = f"{loc} geoID"
 
-        # pairs of [A,B]: new column name A, which comes after the column B
+        # pairs of [A, B]: new column name A, which comes after the column B
         new_columns = [
-            ("geoname_cont", " geoname_country"),
-            ("geoname_ADM1", " geoname_cont"),
+            ("geoname_cont", " location as stated"),
+            ("geoname_country", " geoname_cont"),
+            ("geoname_ADM1", " geoname_country"),
             ("geoname_ADM2", " geoname_ADM1"),
             ("geoname_ADM3", " geoname_ADM2"),
         ]
 
-        # Create empty columns in correct order (makes visual reading and debugging easier)
+        # Create empty columns in the correct order (makes visual reading and debugging easier)
         for new_col_suffix, insert_after_suffix in new_columns:
             new_col_name = f"{loc} {new_col_suffix}"
             insert_after_col = f"{loc}{insert_after_suffix}"
@@ -130,7 +131,7 @@ def process_all_locations():
         except RuntimeError:
             print("⛔ Process halted due to API limit.")
             break
-    # Save final DataFrame with timestamp
+    # Save the final DataFrame with timestamp
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     output_path = os.path.join(ANALYSIS_DIR, f"{OUTPUT_FILE_FETCHED_LOC}_{timestamp}.xlsx")
     df.to_excel(output_path, index=False)
