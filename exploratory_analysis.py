@@ -1,9 +1,9 @@
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import os
+from sankeydiagram import create_and_plot_sankey_diagram_phd_data
 
 
 def create_wordcloud(text_series, output_path, title):
@@ -20,46 +20,10 @@ def create_wordcloud(text_series, output_path, title):
     
     return wordcloud
 
+
 def count_route_lengths(row):
     # TODO
     return sum(pd.notna(row[f'loc{i}']) for i in range(1, 5))
-
-
-def create_sankey_diagram(df, output_path):
-    total_articles = len(df)
-    years = sorted(df['year'].unique())
-
-    labels = ['All Articles']
-    labels.extend([f'Year {year}' for year in years])
-
-    source = []
-    target = []
-    values = []
-
-    for i, year in enumerate(years, 1):
-        year_count = len(df[df['year'] == year])
-        source.append(0)
-        target.append(i)
-        values.append(year_count)
-
-    fig = go.Figure(data=[go.Sankey(
-        node=dict(
-            pad=15,
-            thickness=20,
-            line=dict(color="black", width=0.5),
-            label=labels,
-        ),
-        link=dict(
-            source=source,
-            target=target,
-            value=values
-        )
-    )])
-
-    fig.update_layout(title_text="Article Distribution Flow")
-    fig.write_html(output_path)
-
-    return fig
 
 
 def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data_file_path):
@@ -96,7 +60,7 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
 
         # 1.2 Count articles that are include=1 (article means only the first route which ends with -1 as the others are routes within that article)
         included_articles_count = len(included_df['mergeID'].str.endswith('-1'))
-        print(f"Included articles count: {included_articles_count}")
+        print(f">Included articles count: {included_articles_count}")
         results['included_articles_count'] = included_articles_count
 
         # 2.1 Count articles per year ----------------------------------------------------------------------------------
@@ -104,17 +68,20 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
                     df_full['mergeID'].astype(str).str.endswith('-1') | df_full['mergeID'].astype(str).str.endswith(
                 '-') | df_full['mergeID'].astype(str).str.endswith('-0'))][
             'Publication Date'].dt.year.value_counts().sort_index()
+        print(f">total_articles_per_year: {total_articles_per_year}")
         results['total_articles_per_year'] = total_articles_per_year
+
         # 2.2 Count included articles per year -------------------------------------------------------------------------
         included_articles_per_year = included_df[included_df['mergeID'].astype(str).str.endswith('-1')][
             'Publication Date'].dt.year.value_counts().sort_index()
-        print(f"Included articles per year: {included_articles_per_year}")
+        print(f">Included articles per year: {included_articles_per_year}")
         results['included_articles_per_year'] = included_articles_per_year
+
         # 2.3 Count included routes per year ---------------------------------------------------------------------------
-        included_routes_per_year = included_df[included_df['ID']][
+        included_routes_per_year = included_df[
             'Publication Date'].dt.year.value_counts().sort_index()
-        print(f"Included routes per year: {included_routes_per_year}")
-        results['included_articles_per_year'] = included_routes_per_year
+        print(f">Included routes per year: {included_routes_per_year}")
+        results['included_routes_per_year'] = included_routes_per_year
 
         # # 3. Count routes per article included -----------------------------------------------------------------------
         # # TODO count the -2 -3 -4 -5... and then calc
@@ -130,12 +97,14 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
         # # route_lengths = included_df['route_length'].value_counts().sort_index()
         # # results['route_lengths'] = route_lengths
 
-        # # 5. Create and save Sankey diagram
-        # sankey_path = os.path.join(output_dir, 'sankey_diagram.html')
-        # create_sankey_diagram(included_df, sankey_path)
+        # 5. Create and save Sankey diagram
+        print("plotting sankey diagram...")
+        sankey_path = os.path.join(output_dir, 'sankey_diagram.html')
+        create_and_plot_sankey_diagram_phd_data(results, sankey_path)
 
         # 6. Count medicine quality distribution
         medicine_quality_counts = included_df['medicine_quality'].value_counts()
+        print(f"medicine_quality_counts: {medicine_quality_counts}")
         results['medicine_quality_counts'] = medicine_quality_counts
 
         # # 7. Analyze individuals per route
