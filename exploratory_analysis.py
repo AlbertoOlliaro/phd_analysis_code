@@ -3,6 +3,8 @@ import plotly.graph_objects as go
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import os
+import pickle
+from datetime import datetime
 from sankeydiagram import create_and_plot_sankey_diagram_phd_data
 
 
@@ -90,31 +92,40 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
         # results['routes_per_article'] = routes_per_article
         #
         # # 4. Count routes of length 2, 3, and 4 ----------------------------------------------------------------------
-        # number_of_routes = len(included_df)
-        # results['number_of_routes'] = number_of_routes
-        # # TODO count the loc3 NOT empty, the loc4 NOT empty, then subtract the sum of the two from the "number of routes"
-        # # included_df['route_length'] = included_df.apply(count_route_lengths, axis=1)
-        # # route_lengths = included_df['route_length'].value_counts().sort_index()
-        # # results['route_lengths'] = route_lengths
+        total_number_of_routes = len(included_df)
+        def is_non_empty(col_name):
+            col = included_df[col_name]
+            return col.notna() & col.astype(str).str.strip().ne('')
 
-        # 5. Create and save Sankey diagram
+        count_have_4 = is_non_empty('loc4 geoID').sum()
+        count_have_3 = is_non_empty('loc3 geoID').sum()
+        counts_by_length = pd.Series({
+            4: int(count_have_4),
+            3: int(count_have_3 - count_have_4),
+            2: int(total_number_of_routes - count_have_3),
+        }).sort_index()
+        results['count_of_routes_per_length'] = counts_by_length
+        print(f">Route lengths -> {results['count_of_routes_per_length'].to_dict()}")
+
+        # 5. Create and save Sankey diagram ----------------------------------------------------------------------------
         print("plotting sankey diagram...")
         sankey_path = os.path.join(output_dir, 'sankey_diagram.html')
         create_and_plot_sankey_diagram_phd_data(results, sankey_path)
 
-        # 6. Count medicine quality distribution
-        medicine_quality_counts = included_df['medicine_quality'].value_counts()
+        # 6. Count medicine quality distribution (ratio of "falsified" to "indistinguishable"
+        medicine_quality_counts = included_df['medicine quality'].value_counts()
         print(f"medicine_quality_counts: {medicine_quality_counts}")
         results['medicine_quality_counts'] = medicine_quality_counts
 
-        # # 7. Analyze individuals per route
-        # individuals_stats = included_df.groupby('route_length')['number_of_individuals'].agg({
-        #     'median': 'median',
-        #     'mean': 'mean'
-        # })
-        # results['individuals_stats'] = individuals_stats
+        # 7. Analyze individuals per route -----------------------------------------------------------------------------
+        individuals_stats = pd.to_numeric(included_df['number of individuals'], errors='coerce').agg({
+            'median': 'median',
+            'mean': 'mean'
+        })
+        print(f"number of individuals_stats: {individuals_stats}")
+        results['individuals_stats'] = individuals_stats
 
-        # 8. Create and save WordClouds
+        # 8. collect FMP encountered and plot/save WordClouds ----------------------------------------------------------
         create_wordcloud(
             included_df['Medical Products'],
             os.path.join(output_dir, 'medical_products_wordcloud.png'),
@@ -127,39 +138,61 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
             'Wording Used WordCloud'
         )
 
-        # 9. Calculate manufacturing roles percentage
+        # 9. Calculate manufacturing roles percentage ------------------------------------------------------------------
         manufacturing_percentage = (
-                included_df['loc1_node_role'].str.contains('manufacturing', case=False, na=False).mean() * 100
+                included_df['loc1 node role'].str.contains('manufacturing', case=False, na=False).mecan() * 100
         )
+        print(f">Manufacturing percentage: {manufacturing_percentage}")
         results['manufacturing_percentage'] = manufacturing_percentage
 
-        # Save summary statistics to Excel
-        summary_dict = {
-            'Metric': [
-                'Total Included Articles',
-                'Manufacturing Percentage in loc1',
-            ],
-            'Value': [
-                included_articles_count,
-                f"{manufacturing_percentage:.2f}%"
-            ]
-        }
+        # 10. collect countries, plot/save WordClouds, do a set and count how many different ones ----------------------
+        country_cols = [f'loc{i} geoname_country' for i in range(1, 5)]
+        existing_country_cols = [c for c in country_cols if c in included_df.columns]
+        countries_series = (
+            included_df[existing_country_cols]
+            .stack(dropna=True)
+            .astype(str)
+            .str.strip()
+        )
+        countries_series = countries_series[countries_series.ne('')]
+        countries_list = countries_series.tolist()
 
-        summary_df = pd.DataFrame(summary_dict)
-        summary_df.to_excel(os.path.join(output_dir, 'analysis_summary.xlsx'), index=False)
+        create_wordcloud(
+            pd.Series(countries_list),
+            os.path.join(output_dir, 'countries_wordcloud.png'),
+            'Countries WordCloud'
+        )
+        print(f">Unique countries count: {results['unique_countries_count']}")
+        results['unique_countries_count'] = int(countries_series.nunique())
+        print(f">Unique countries list: {results['unique_countries_list']}")
+        results['unique_countries_list'] = countries_series.nunique()
 
-        # Save detailed results to Excel
-        # with pd.ExcelWriter(os.path.join(output_dir, 'detailed_analysis.xlsx')) as writer:
-        #     total_articles_per_year.to_frame('count').to_excel(writer, sheet_name='Articles_per_Year')
-        #     included_articles_per_year.to_frame('count').to_excel(writer, sheet_name='Included Articles_per_Year')
-        #     routes_per_article.to_frame('count').to_excel(writer, sheet_name='Routes_per_Article')
-        #     # route_lengths.to_frame('count').to_excel(writer, sheet_name='Route_Lengths')
-        #     medicine_quality_counts.to_frame('count').to_excel(writer, sheet_name='Medicine_Quality')
-        #     individuals_stats.to_excel(writer, sheet_name='Individuals_Stats')
+        # Save to Excel
+        print("Saving exploratory analysis results to Excel...")
+        with pd.ExcelWriter(os.path.join(output_dir, 'detailed_analysis.xlsx')) as writer:
+            results['total_articles_count'].to_frame().to_excel(writer, sheet_name='Total_Articles')
+            results['included_articles_count'].to_frame().to_excel(writer, sheet_name='Total_Included_Articles')
+            total_articles_per_year.to_frame().to_excel(writer, sheet_name='Articles_per_Year')
+            included_articles_per_year.to_frame().to_excel(writer, sheet_name='Included Articles_per_Year')
+            results['included_routes_per_year'].to_frame().to_excel(writer, sheet_name='Included Routes_per_Year')
+            results['count_of_routes_per_length'].to_frame().to_excel(writer, sheet_name='Routes_by_Length')
+            medicine_quality_counts.to_frame().to_excel(writer, sheet_name='Medicine_Quality')
+            individuals_stats.to_excel(writer, sheet_name='Individuals_Stats')
+            results['manufacturing_percentage'].to_frame().to_excel(writer, sheet_name='Manufacturing_Percentage')
+            results['unique_countries_count'].to_frame('count').to_excel(writer, sheet_name='Countries_count')
+            results['unique_countries_list'].to_excel(writer, sheet_name='Countries_List')
+
+
 
     except Exception as e:
         print(results)
         print(f"Error handling dataframe : {e}")
+        # Save results with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        results_path = os.path.join(ANALYSIS_DIR, f"results_preliminary_analysis_{timestamp}.pkl")
+        with open(results_path, "wb") as f:
+            pickle.dump(results, f)
+        print(f"Saved exploratory analysis results to: {results_path}")
         return results
 
     print("Full exploratory success")
@@ -176,4 +209,8 @@ if __name__ == "__main__":
         ANALYSIS_DIR,
         os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME)
     )
+
+
+
+
 
