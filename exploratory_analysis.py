@@ -1,41 +1,14 @@
 import pandas as pd
-import plotly.graph_objects as go
-from wordcloud import WordCloud
-import matplotlib.pyplot as plt
+from mywordcloud import create_wordcloud
 import os
 import pickle
 from datetime import datetime
 from sankeydiagram import create_and_plot_sankey_diagram_phd_data
 
 
-def create_wordcloud(text_dataframe, output_path, title):
-
-    phrases = (
-        text_dataframe.dropna().astype(str).str.split(';')
-        .explode()
-        .astype(str)
-        .str.strip()
-    )
-    phrases = phrases[phrases.ne('')]
-    freq = phrases.value_counts().to_dict()
-    wordcloud = WordCloud(width=800, height=400, background_color='white',
-                          collocations=False).generate_from_frequencies(freq)
-
-    plt.figure(figsize=(10, 5))
-    plt.imshow(wordcloud, interpolation='bilinear')
-    plt.axis('off')
-    plt.title(title)
-    plt.savefig(output_path)
-    plt.show()
-    plt.close()
-    
-    return wordcloud
-
-
-def count_route_lengths(row):
-    # TODO
-    return sum(pd.notna(row[f'loc{i}']) for i in range(1, 5))
-
+# def count_route_lengths(row):
+#     # TODO average route length and stats on route length
+#     return sum(pd.notna(row[f'loc{i}']) for i in range(1, 5))
 
 def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data_file_path):
     """
