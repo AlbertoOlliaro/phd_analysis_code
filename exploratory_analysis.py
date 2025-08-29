@@ -135,10 +135,18 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
                 included_df['loc1 node role'].str.contains('intermediary', case=False, na=False).mean() * 100
         )
         print(f"Intermediary_percentage: {intermediary_percentage}%")
+
+        # 9.3 Calculate clear intermediaries as first point role percentage --------------------------------------------
+        unknown_percentage = (
+                included_df['loc1 node role'].str.contains('unknown', case=False, na=False).mean() * 100
+        )
+        print(f"Unknown_percentage: {unknown_percentage}%")
+
         first_node_stats = pd.Series({
             'origin': int(origin_percentage),
             'intermediary': int(intermediary_percentage),
-            'manufacturing': int(manufacturing_percentage)
+            'manufacturing': int(manufacturing_percentage),
+            'unknown': int(unknown_percentage)
         })
         results['first_node_stats'] = first_node_stats
 
