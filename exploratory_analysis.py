@@ -172,34 +172,52 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
         # 10. collect unique countries ---------------------------------------------------------------------------------
         country_cols = [f'loc{i} geoname_country' for i in range(1, 5)]
         # existing_country_cols = [c for c in country_cols if c in included_df.columns]
-        countries_series = (
+        countries_list = (
             included_df[country_cols]
             .stack(future_stack=True)
             .dropna()
             .astype(str)
             .str.strip()
         )
+        countries_list = countries_list[countries_list.ne('')].tolist()
+        countries_list_set = set(countries_list)
 
-        results['unique_countries_list'] = set(countries_series.unique())
+        results['unique_countries_list'] = countries_list_set
         print(f">Unique countries list: {results['unique_countries_list']}")
-        results['unique_countries_count'] = int(countries_series.unique())
+        results['unique_countries_count'] = int(len(countries_list_set))
         print(f">Unique countries count: {results['unique_countries_count']}")
 
         # Save to Excel
         print("Saving exploratory analysis results to Excel...")
+        # Prepare writeables to avoid errors (no .to_frame() on scalars/sets)
+        total_articles_count_df = pd.DataFrame({'total_articles_count': [results['total_articles_count']]})
+        included_articles_count_df = pd.DataFrame({'included_articles_count': [results['included_articles_count']]})
+        included_routes_per_year_df = results['included_routes_per_year'].to_frame(name='count')
+        total_articles_per_year_df = total_articles_per_year.to_frame(name='count')
+        included_articles_per_year_df = included_articles_per_year.to_frame(name='count')
+        routes_by_length_df = results['count_of_routes_per_length'].to_frame(name='count')
+        medicine_quality_counts_df = medicine_quality_counts.to_frame(name='count')
+        individuals_stats_df = results['individuals_stats'].to_frame(name='value')
+        first_node_stats_df = results['first_node_stats'].to_frame(name='count')
+        unique_countries_count_df = pd.DataFrame({'unique_countries_count': [results['unique_countries_count']]})
+        unique_countries_list_df = pd.Series(
+            sorted(results['unique_countries_list'])
+        ).to_frame(name='country')
+
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         with pd.ExcelWriter(os.path.join(output_dir, f"detailed_analysis_{timestamp}.xlsx")) as writer:
-            results['total_articles_count'].to_frame().to_excel(writer, sheet_name='Total_Articles')
-            results['included_articles_count'].to_frame().to_excel(writer, sheet_name='Total_Included_Articles')
-            total_articles_per_year.to_frame().to_excel(writer, sheet_name='Articles_per_Year')
-            included_articles_per_year.to_frame().to_excel(writer, sheet_name='Included Articles_per_Year')
-            results['included_routes_per_year'].to_frame().to_excel(writer, sheet_name='Included Routes_per_Year')
-            results['count_of_routes_per_length'].to_frame().to_excel(writer, sheet_name='Routes_by_Length')
-            medicine_quality_counts.to_frame().to_excel(writer, sheet_name='Medicine_Quality')
-            individuals_stats.to_excel(writer, sheet_name='Individuals_Stats')
-            results['first_node_stats'].to_frame().to_excel(writer, sheet_name='First_node_stats')
-            results['unique_countries_count'].to_frame().to_excel(writer, sheet_name='Countries_count')
-            results['unique_countries_list'].to_excel(writer, sheet_name='Countries_List')
+            total_articles_count_df.to_excel(writer, sheet_name='Total_Articles', index=False)
+            included_articles_count_df.to_excel(writer, sheet_name='Total_Included_Articles', index=False)
+            total_articles_per_year_df.to_excel(writer, sheet_name='Articles_per_Year')
+            included_articles_per_year_df.to_excel(writer, sheet_name='Included_Articles_per_Year')
+            included_routes_per_year_df.to_excel(writer, sheet_name='Included_Routes_per_Year')
+            routes_by_length_df.to_excel(writer, sheet_name='Routes_by_Length')
+            medicine_quality_counts_df.to_excel(writer, sheet_name='Medicine_Quality')
+            individuals_stats_df.to_excel(writer, sheet_name='Individuals_Stats')
+            first_node_stats_df.to_excel(writer, sheet_name='First_node_stats')
+            unique_countries_count_df.to_excel(writer, sheet_name='Countries_count', index=False)
+            unique_countries_list_df.to_excel(writer, sheet_name='Countries_List', index=False)
+
 
     except Exception as e:
         print(results)
@@ -212,7 +230,7 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
         print(f"Saved exploratory analysis results to: {results_path}")
         return results
 
-    print("Full exploratory success")
+    print("Full exploratory analysis success")
     return results
 
 
