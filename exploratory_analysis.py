@@ -6,10 +6,6 @@ from datetime import datetime
 from sankeydiagram import create_and_plot_sankey_diagram_phd_data
 
 
-# def count_route_lengths(row):
-#     # TODO average route length and stats on route length
-#     return sum(pd.notna(row[f'loc{i}']) for i in range(1, 5))
-
 def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data_file_path):
     """
     Perform exploratory analysis on the input data and save results to the output directory.
@@ -186,7 +182,7 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
         ).to_frame(name='country')
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        with pd.ExcelWriter(os.path.join(output_dir, f"detailed_analysis_{timestamp}.xlsx")) as writer:
+        with pd.ExcelWriter(os.path.join(output_dir, f"1.4_detailed_analysis_{timestamp}.xlsx")) as writer:
             total_articles_count_df.to_excel(writer, sheet_name='Total_Articles', index=False)
             included_articles_count_df.to_excel(writer, sheet_name='Total_Included_Articles', index=False)
             total_articles_per_year_df.to_excel(writer, sheet_name='Articles_per_Year')
@@ -213,20 +209,3 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
 
     print("Full exploratory analysis success")
     return results
-
-
-if __name__ == "__main__":
-    DATA_GEONAMES_FILENAME = "1.1_ENGdata_geoID.xlsx"
-    DATA_WITH_LOCATIONS_FETCHED_FILENAME = "1.3_ENGdata_geonamesExtracted.xlsx"
-    ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/dphil excels/phd_analysis_data/"
-    # 1.3 to 1.4 exploratory analysis, diagrams and stats
-    explo_analysis_results = run_exploratory_analysis(
-        os.path.join(ANALYSIS_DIR, DATA_WITH_LOCATIONS_FETCHED_FILENAME),
-        ANALYSIS_DIR,
-        os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME)
-    )
-
-
-
-
-

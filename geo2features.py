@@ -11,7 +11,7 @@ DICT_GEOID_FILENAME = "aux_geonames_ID_dictionary.xlsx"
 OUTPUT_FILE_FETCHED_LOC = "1.3_ENGdata_geonamesExtracted"
 ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/dphil excels/phd_analysis_data/"
 
-USERNAME = 'albertoolliaro' # for geonames API
+USERNAME = 'albertoolliaro' # geonames API requires a private username to allow more queries
 
 test_geonameID = 7285904
 
@@ -31,7 +31,7 @@ else:
     geonames_cache = {}
 
 
-# queries geonames API to find location hierarchy
+# queries geonames API to find location hierarchy and geonameID, lat, lon, of country
 def query_geonames_api(geoname_id):
     url = f"http://api.geonames.org/hierarchy?geonameId={geoname_id}&username={USERNAME}"
     time.sleep(0.6)  # Throttle to stay under 1000/hour
@@ -52,6 +52,9 @@ def query_geonames_api(geoname_id):
         result["continent"] = geo_elements[0].findtext("toponymName")
     if len(geo_elements) >= 2:
         result["geoname_countryName"] = geo_elements[1].findtext("toponymName")
+        result["geoname_country_geoID"] = geo_elements[1].findtext("geonameId")
+        result["geoname_country_lat"] = geo_elements[1].findtext("lat")
+        result["geoname_country_lon"] = geo_elements[1].findtext("lng")
     if len(geo_elements) >= 3:
         result["ADM1"] = geo_elements[2].findtext("toponymName")
     if len(geo_elements) >= 4:
@@ -62,7 +65,7 @@ def query_geonames_api(geoname_id):
     return result
 
 
-# Fetch from cache or update dictionary if needed
+# Fetch from cache (or update dictionary if needed) and return the country info, admin123 and continent
 def get_geonames_data(geo_id):
     try:
         #ignore null, empty, or "world" geoIDs
@@ -97,7 +100,7 @@ def get_geonames_data(geo_id):
         return {}
 
 
-# Process locations, by column loc 1234 then by row, to retrieve its hierarchy from geonames
+# Process locations, by column loc 1234 then by row, to retrieve its hierarchy from the geonames API
 def process_all_locations():
     for loc in ["loc1", "loc2", "loc3", "loc4"]:
         print(f"📍 Working on: {loc}")
@@ -105,11 +108,14 @@ def process_all_locations():
 
         # pairs of [A, B]: new column name A, which comes after the column B
         new_columns = [
-            ("geoname_cont", " location as stated"),
-            ("geoname_country", " geoname_cont"),
-            ("geoname_ADM1", " geoname_country"),
-            ("geoname_ADM2", " geoname_ADM1"),
-            ("geoname_ADM3", " geoname_ADM2"),
+            ("geoname_cont", "location as stated"),
+            ("geoname_country", "geoname_cont"),
+            ("geoname_country_geoID", "geoname_country"),
+            ("geoname_country_lat", "geoname_country_geoID"),
+            ("geoname_country_lon", "geoname_country_lat"),
+            ("geoname_ADM1", "geoname_country_lon"),
+            ("geoname_ADM2", "geoname_ADM1"),
+            ("geoname_ADM3", "geoname_ADM2"),
         ]
 
         # Create empty columns in the correct order (makes visual reading and debugging easier)
@@ -120,11 +126,17 @@ def process_all_locations():
                 insert_pos = df.columns.get_loc(insert_after_col) + 1
                 df.insert(insert_pos, new_col_name, pd.NA)
 
-        # Apply lookup for each row with lambdas
+        # Apply lookup on the get_geonames_data() for each row with lambdas
         try:
             df[f"{loc} geoname_cont"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x).get("continent"))
             df[f"{loc} geoname_country"] = df[geoname_id_col].apply(
                 lambda x: get_geonames_data(x).get("geoname_countryName"))
+            df[f"{loc} geoname_country_geoID"] = df[geoname_id_col].apply(
+                lambda x: get_geonames_data(x).get("geoname_country_geoID"))
+            df[f"{loc} geoname_country_lat"] = df[geoname_id_col].apply(
+                lambda x: get_geonames_data(x).get("geoname_country_lat"))
+            df[f"{loc} geoname_country_lon"] = df[geoname_id_col].apply(
+                lambda x: get_geonames_data(x).get("geoname_country_lon"))
             df[f"{loc} geoname_ADM1"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x).get("ADM1"))
             df[f"{loc} geoname_ADM2"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x).get("ADM2"))
             df[f"{loc} geoname_ADM3"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x).get("ADM3"))
@@ -140,9 +152,11 @@ def process_all_locations():
 
 def test_query_geonames_api():
     """
-    Test the query_geonames_api function to ensure the correct hierarchy is returned.
+    Test the query_geonames_api function to ensure the correct hierarchy is returned by
+    calling http://api.geonames.org/hierarchy?geonameId=7285904&username=albertoolliaro
     """
-    result_hierarchy = ["Europe", "Switzerland", "Canton de Genève", "Geneva", "Genthod"]
+    result_hierarchy = ["Europe", "Switzerland", "Canton de Genève", "Geneva", "Genthod",
+                        "2658434", "47.00016", "8.01427"]
     # Arrange
     api_result = query_geonames_api(test_geonameID)
 
@@ -151,6 +165,9 @@ def test_query_geonames_api():
     admin1 = api_result.get("ADM1")
     admin2 = api_result.get("ADM2")
     admin3 = api_result.get("ADM3")
+    country_geoId = api_result.get("geoname_country_geoID")
+    country_lat = api_result.get("geoname_country_lat")
+    country_lon = api_result.get("geoname_country_lon")
 
     # Assert
     assert result_hierarchy[0] == cont, f"Test failed! Expected '{result_hierarchy[0]}', but got '{cont}'."
@@ -158,4 +175,7 @@ def test_query_geonames_api():
     assert result_hierarchy[2] == admin1, f"Test failed! Expected '{result_hierarchy[2]}', but got '{admin1}'."
     assert result_hierarchy[3] == admin2, f"Test failed! Expected '{result_hierarchy[3]}', but got '{admin2}'."
     assert result_hierarchy[4] == admin3, f"Test failed! Expected '{result_hierarchy[4]}', but got '{admin3}'."
+    assert result_hierarchy[5] == country_geoId, f"Test failed! Expected '{result_hierarchy[5]}', but got '{country_geoId}'."
+    assert result_hierarchy[6] == country_lat, f"Test failed! Expected '{result_hierarchy[6]}', but got '{country_lat}'."
+    assert result_hierarchy[7] == country_lon, f"Test failed! Expected '{result_hierarchy[7]}', but got '{country_lon}'."
 
