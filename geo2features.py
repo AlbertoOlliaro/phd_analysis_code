@@ -52,7 +52,7 @@ def query_geonames_api(geoname_id):
         result["continent"] = geo_elements[0].findtext("toponymName")
     if len(geo_elements) >= 2:
         result["geoname_countryName"] = geo_elements[1].findtext("toponymName")
-        result["geoname_country_geoID"] = geo_elements[1].findtext("geonameId")
+        result["geoname_country_geoId"] = geo_elements[1].findtext("geonameId")
         result["geoname_country_lat"] = geo_elements[1].findtext("lat")
         result["geoname_country_lon"] = geo_elements[1].findtext("lng")
     if len(geo_elements) >= 3:
@@ -110,8 +110,8 @@ def process_all_locations():
         new_columns = [
             ("geoname_cont", "location as stated"),
             ("geoname_country", "geoname_cont"),
-            ("geoname_country_geoID", "geoname_country"),
-            ("geoname_country_lat", "geoname_country_geoID"),
+            ("geoname_country_geoId", "geoname_country"),
+            ("geoname_country_lat", "geoname_country_geoId"),
             ("geoname_country_lon", "geoname_country_lat"),
             ("geoname_ADM1", "geoname_country_lon"),
             ("geoname_ADM2", "geoname_ADM1"),
@@ -121,7 +121,7 @@ def process_all_locations():
         # Create empty columns in the correct order (makes visual reading and debugging easier)
         for new_col_suffix, insert_after_suffix in new_columns:
             new_col_name = f"{loc} {new_col_suffix}"
-            insert_after_col = f"{loc}{insert_after_suffix}"
+            insert_after_col = f"{loc} {insert_after_suffix}"
             if new_col_name not in df.columns:
                 insert_pos = df.columns.get_loc(insert_after_col) + 1
                 df.insert(insert_pos, new_col_name, pd.NA)
@@ -131,8 +131,8 @@ def process_all_locations():
             df[f"{loc} geoname_cont"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x).get("continent"))
             df[f"{loc} geoname_country"] = df[geoname_id_col].apply(
                 lambda x: get_geonames_data(x).get("geoname_countryName"))
-            df[f"{loc} geoname_country_geoID"] = df[geoname_id_col].apply(
-                lambda x: get_geonames_data(x).get("geoname_country_geoID"))
+            df[f"{loc} geoname_country_geoId"] = df[geoname_id_col].apply(
+                lambda x: get_geonames_data(x).get("geoname_country_geoId"))
             df[f"{loc} geoname_country_lat"] = df[geoname_id_col].apply(
                 lambda x: get_geonames_data(x).get("geoname_country_lat"))
             df[f"{loc} geoname_country_lon"] = df[geoname_id_col].apply(
@@ -148,6 +148,7 @@ def process_all_locations():
     output_path = os.path.join(ANALYSIS_DIR, f"{OUTPUT_FILE_FETCHED_LOC}_{timestamp}.xlsx")
     df.to_excel(output_path, index=False)
     print("✅ All done. Output saved to:", output_path)
+    return df, output_path
 
 
 def test_query_geonames_api():
@@ -165,7 +166,7 @@ def test_query_geonames_api():
     admin1 = api_result.get("ADM1")
     admin2 = api_result.get("ADM2")
     admin3 = api_result.get("ADM3")
-    country_geoId = api_result.get("geoname_country_geoID")
+    country_geoId = api_result.get("geoname_country_geoId")
     country_lat = api_result.get("geoname_country_lat")
     country_lon = api_result.get("geoname_country_lon")
 

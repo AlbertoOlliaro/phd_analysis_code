@@ -182,7 +182,8 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
         ).to_frame(name='country')
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        with pd.ExcelWriter(os.path.join(output_dir, f"1.4_detailed_analysis_{timestamp}.xlsx")) as writer:
+        analysis_file_path = os.path.join(output_dir, f"1.4_exploratory_analysis_{timestamp}.xlsx")
+        with pd.ExcelWriter(analysis_file_path) as writer:
             total_articles_count_df.to_excel(writer, sheet_name='Total_Articles', index=False)
             included_articles_count_df.to_excel(writer, sheet_name='Total_Included_Articles', index=False)
             total_articles_per_year_df.to_excel(writer, sheet_name='Articles_per_Year')
@@ -201,11 +202,11 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
         print(f"Error handling dataframe : {e}")
         # Save results with timestamp
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        results_path = os.path.join(ANALYSIS_DIR, f"results_preliminary_analysis_{timestamp}.pkl")
+        results_path = os.path.join(output_dir, f"results_preliminary_analysis_{timestamp}.pkl")
         with open(results_path, "wb") as f:
             pickle.dump(results, f)
         print(f"Saved exploratory analysis results to: {results_path}")
         return results
 
     print("Full exploratory analysis success")
-    return results
+    return results, analysis_file_path
