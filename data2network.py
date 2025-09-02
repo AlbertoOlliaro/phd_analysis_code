@@ -27,6 +27,8 @@ def construct_nodes(indexed_df):
     node_attributes_col = ["geoname_country", "geoname_country_geoId", "geoname_country_lat", "geoname_country_lon"]
     nodes_by_id = {}
 
+# TODO use the "aux_geonames_ID_dictionary" file instead:
+    #  use the country geoID and name and lat lon columns only, make a set, done
     for loc in ["loc1", "loc2", "loc3", "loc4"]:
         name_col = f"{loc} {node_attributes_col[0]}"
         geoId_col = f"{loc} {node_attributes_col[1]}"
@@ -45,17 +47,10 @@ def construct_nodes(indexed_df):
                 lat = row.get(lat_col)
                 lon = row.get(lon_col)
 
-                # best-effort normalization
-                def to_float_safe(v):
-                    try:
-                        return float(v) if v is not None and not pd.isna(v) else None
-                    except Exception:
-                        return None
-
                 nodes_by_id[node_id] = {
                     "ID": node_id,
-                    "lat": to_float_safe(lat),
-                    "lon": to_float_safe(lon),
+                    "lat": lat,
+                    "lon": lon,
                     "country_name": None if pd.isna(country_name) else str(country_name),
                     "country_geoId": node_id,
                 }
@@ -78,7 +73,7 @@ def construct_edges(indexed_df):
     edge_attributes_col_suffix = ["geoname_country", "geoname_country_geoId"]
 
     # loc 3 and/or 4 related columns might be empty
-    # based on route length, there will be 1 2 or 3 edges with the same ID (mergeID)
+    # based on route length, there will be 1 2 or 3 edges with the same mergeID
     edges = []
 
     for merge_id, row in indexed_df.items():

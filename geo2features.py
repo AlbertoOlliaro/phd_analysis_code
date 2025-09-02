@@ -5,30 +5,45 @@ from datetime import datetime
 import os
 import time
 
-# Paths
-DATA_FULL_FILENAME = "1.1_ENGdata_geoID.xlsx"
-DICT_GEOID_FILENAME = "aux_geonames_ID_dictionary.xlsx"
-OUTPUT_FILE_FETCHED_LOC = "1.3_ENGdata_geonamesExtracted"
-ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/dphil excels/phd_analysis_data/"
+from numpy.f2py.auxfuncs import throw_error
 
 USERNAME = 'albertoolliaro' # geonames API requires a private username to allow more queries
+GEONAME_DICTIONARY_FILE_PATH = "./aux_geonames_ID_dictionary.xlsx"
 
 test_geonameID = 7285904
 
-# Load data and filter by 'include'
-df = pd.read_excel(os.path.join(ANALYSIS_DIR, DATA_FULL_FILENAME), sheet_name=0)
-df = df[df["include"] > 0]
+def prep_phase(data_file_path, geoname_dictionary_file_path):
 
-# Load or initialize geonames dictionary
-DICT_GEOID_PATH = os.path.join(ANALYSIS_DIR, DICT_GEOID_FILENAME)
+    # Load data and filter by 'include'
+    if os.path.exists(data_file_path):
+        df = pd.read_excel(data_file_path, sheet_name=0)
+    else:
+        print("❌ No input file found, aborting method.")
+        return
 
-if os.path.exists(DICT_GEOID_PATH):
-    print("🔄 Loading existing GeoNames dictionary...")
-    geonames_df = pd.read_excel(DICT_GEOID_PATH, sheet_name=0)
-    geonames_cache = geonames_df.set_index("geonameId").to_dict(orient="index")
-else:
-    print("📁 No dictionary found, starting fresh.")
-    geonames_cache = {}
+    df = df[df["include"] > 0]
+    global GEONAME_DICTIONARY_FILE_PATH
+    GEONAME_DICTIONARY_FILE_PATH = geoname_dictionary_file_path
+
+    if os.path.exists(geoname_dictionary_file_path):
+        print("🔄 Loading existing GeoNames dictionary...")
+        geonames_dict_df = pd.read_excel(geoname_dictionary_file_path, sheet_name=0)
+        geonames_dict_cache = geonames_dict_df.set_index("geonameId").to_dict(orient="index")
+    else:
+        print("📁 No dictionary found, starting fresh.")
+        geonames_dict_cache = {}
+
+    return df, geonames_dict_cache
+
+
+def add_timestamp_to_filename(file_path):
+    root, ext = os.path.splitext(file_path)
+    return f"{root}_{datetime.now().strftime("%Y%m%d%H%M%S")}{ext}"
+
+def save_df_to_file(file_path, df):
+    timestamped_file_path = add_timestamp_to_filename(file_path)
+    df.to_excel(timestamped_file_path, index=False)
+    return timestamped_file_path
 
 
 # queries geonames API to find location hierarchy and geonameID, lat, lon, of country
@@ -45,13 +60,13 @@ def query_geonames_api(geoname_id):
         print("⚠️ Hourly limit met")
         raise RuntimeError("hourly limit met")
 
-    geo_elements = root.findall("geoname")[1:]
+    geo_elements = root.findall("geoname")[1:] # removes the "earth" element
 
     result = {}
     if len(geo_elements) >= 1:
         result["continent"] = geo_elements[0].findtext("toponymName")
     if len(geo_elements) >= 2:
-        result["geoname_countryName"] = geo_elements[1].findtext("toponymName")
+        result["geoname_countryName"] = geo_elements[1].findtext("name")
         result["geoname_country_geoId"] = geo_elements[1].findtext("geonameId")
         result["geoname_country_lat"] = geo_elements[1].findtext("lat")
         result["geoname_country_lon"] = geo_elements[1].findtext("lng")
@@ -66,7 +81,7 @@ def query_geonames_api(geoname_id):
 
 
 # Fetch from cache (or update dictionary if needed) and return the country info, admin123 and continent
-def get_geonames_data(geo_id):
+def get_geonames_data(geo_id, geonames_dict_cache):
     try:
         #ignore null, empty, or "world" geoIDs
         if pd.isna(geo_id) or str(geo_id).strip().lower() == "world" or str(geo_id).strip() == "":
@@ -76,24 +91,24 @@ def get_geonames_data(geo_id):
         geo_id_int = int(float(geo_id))
 
         #if we already have/saved the geoID, return it
-        if geo_id_int in geonames_cache:
-            return geonames_cache[geo_id_int]
+        if geo_id_int in geonames_dict_cache:
+            return geonames_dict_cache[geo_id_int]
 
         # if not in dictionary: query API
         print(f"🔍 Querying new GeoNames ID: {geo_id_int}")
         result = query_geonames_api(geo_id_int)
-        geonames_cache[geo_id_int] = result
+        geonames_dict_cache[geo_id_int] = result
 
         # Save the updated dictionary immediately
-        pd.DataFrame.from_dict(geonames_cache, orient="index").reset_index().rename(
-            columns={"index": "geonameId"}).to_excel(DICT_GEOID_PATH, index=False)
+        pd.DataFrame.from_dict(geonames_dict_cache, orient="index").reset_index().rename(
+            columns={"index": "geonameId"}).to_excel(geonames_dict_cache, index=False)
         return result
 
     # we save the geonames dictionary if things crash, notably due to the API
     except RuntimeError:
         print("⚠️ Saving partial dictionary to avoid loss...")
-        pd.DataFrame.from_dict(geonames_cache, orient="index").reset_index().rename(
-            columns={"index": "geonameId"}).to_excel(DICT_GEOID_PATH, index=False)
+        pd.DataFrame.from_dict(geonames_dict_cache, orient="index").reset_index().rename(
+            columns={"index": "geonameId"}).to_excel(GEONAME_DICTIONARY_FILE_PATH, index=False)
         raise
     except Exception as e:
         print(f"Error handling geoID {geo_id}: {e}")
@@ -101,7 +116,10 @@ def get_geonames_data(geo_id):
 
 
 # Process locations, by column loc 1234 then by row, to retrieve its hierarchy from the geonames API
-def process_all_locations():
+def process_all_locations(data_file_path, geoname_dictionary_file_path, output_file_path):
+
+    df, geonames_dict_cache = prep_phase(data_file_path, geoname_dictionary_file_path)
+
     for loc in ["loc1", "loc2", "loc3", "loc4"]:
         print(f"📍 Working on: {loc}")
         geoname_id_col = f"{loc} geoID"
@@ -143,12 +161,10 @@ def process_all_locations():
         except RuntimeError:
             print("⛔ Process halted due to API limit.")
             break
-    # Save the final DataFrame with timestamp
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    output_path = os.path.join(ANALYSIS_DIR, f"{OUTPUT_FILE_FETCHED_LOC}_{timestamp}.xlsx")
-    df.to_excel(output_path, index=False)
-    print("✅ All done. Output saved to:", output_path)
-    return df, output_path
+    # Save the final DataFrame with timestam
+    output_file_path=  save_df_to_file(output_file_path, df)
+    print("✅ All done. Output saved to:", output_file_path)
+    return df, output_file_path
 
 
 def test_query_geonames_api():

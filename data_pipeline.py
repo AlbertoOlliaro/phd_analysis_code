@@ -21,6 +21,7 @@ from geo2features import *
 DICT_GEOID_FILENAME = "aux_geonames_ID_dictionary.xlsx"
 ## output files
 DATA_GEONAMES_FILENAME = "1.1_ENGdata_geoID.xlsx"
+# 1.2 deprecated
 INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME = "1.3_ENGdata_geonamesExtracted.xlsx"
 EXPLORATORY_ANALYSIS_FILENAME = "1.4_exploratory_analysis.xlsx"
 NETWORK_DATA_FILENAME = "1.5_ENGdata_network.xlsx"
@@ -40,22 +41,26 @@ def pre_testing():
 
 if __name__ == "__main__":
 
-    # Step 1.2 to 1.3: from data and geoID to geographical features ===================================================
+    # Step 1.1 to 1.3: from data and geoID to geographical features ===================================================
     # SKIP as done and clean
     # TODO refactor all functions to use only the constants from this file and not local ones
     # TODO refactor saving functionnality to use file names as parameter and append timestamp and file extension locally
-    # df, latest_1_3_file_path = process_all_locations()
+    df, latest_1_3_file_path = process_all_locations(
+        os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME),
+        os.path.join(ANALYSIS_DIR, GEONAME_DICTIONARY_FILE_PATH),
+        os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME)
+    )
     # copy latest file to reusable file_name
-    # shutil.copy(latest_1_3_file_path, os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME))
+    shutil.copy(latest_1_3_file_path, os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME))
 
     # Step 1.3 to 1.4: Exploratory analysis, diagrams and stats ======================================================
     # SKIP as it is done
-    # explo_analysis_results, analysis_latest_file_path  = run_exploratory_analysis(
-    #     os.path.join(ANALYSIS_DIR, DATA_WITH_LOCATIONS_FETCHED_FILENAME),
-    #     ANALYSIS_DIR,
-    #     os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME)
-    # )
-    # shutil.copy(latest_1_4_file_path, os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME))
+    explo_analysis_results, latest_1_4_file_path  = run_exploratory_analysis(
+        os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME),
+        ANALYSIS_DIR,
+        os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME)
+    )
+    shutil.copy(latest_1_4_file_path, os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME))
 
 
     # Step 1.3 to 1.5: transform data to edges pairs ==================================================================
