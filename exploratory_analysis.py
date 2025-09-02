@@ -5,8 +5,12 @@ import pickle
 from datetime import datetime
 from sankeydiagram import create_and_plot_sankey_diagram_phd_data
 
+def add_timestamp_to_filename(file_path):
+    root, ext = os.path.splitext(file_path)
+    return f"{root}_{datetime.now().strftime("%Y%m%d%H%M%S")}{ext}"
 
-def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data_file_path):
+
+def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data_file_path, exploratory_analysis_file_path):
     """
     Perform exploratory analysis on the input data and save results to the output directory.
 
@@ -23,7 +27,7 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
         Dictionary containing summary statistics and analysis results
     """
 
-    # Initialize results dictionary
+    # Initialise results dictionary
     results = {}
 
     try:
@@ -181,8 +185,7 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
             sorted(results['unique_countries_list'])
         ).to_frame(name='country')
 
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        analysis_file_path = os.path.join(output_dir, f"1.4_exploratory_analysis_{timestamp}.xlsx")
+        analysis_file_path = os.path.join(output_dir, add_timestamp_to_filename(exploratory_analysis_file_path))
         with pd.ExcelWriter(analysis_file_path) as writer:
             total_articles_count_df.to_excel(writer, sheet_name='Total_Articles', index=False)
             included_articles_count_df.to_excel(writer, sheet_name='Total_Included_Articles', index=False)

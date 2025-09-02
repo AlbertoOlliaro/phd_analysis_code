@@ -1,5 +1,5 @@
+import os
 import pandas as pd
-from os.path import join
 from datetime import datetime
 
 
@@ -9,6 +9,10 @@ from datetime import datetime
 # the nodes table is a list of locations with attributes such as lat and lon (currently locations are countries)
 # the edges table is a list of connections between locations with attributes such as time interval
 #     time interval according to https://gephi.org/users/supported-graph-formats/spreadsheet/
+
+def add_timestamp_to_filename(file_path):
+    root, ext = os.path.splitext(file_path)
+    return f"{root}_{datetime.now().strftime("%Y%m%d%H%M%S")}{ext}"
 
 
 def construct_nodes(indexed_df):
@@ -130,27 +134,16 @@ def transform2network( only_included_routes_data_file_path, output_dir, output_f
         Path to the written Excel file
     """
 
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    analysis_file_path = join(output_dir, f"1.4_exploratory_analysis_{timestamp}.xlsx")
-
     routes_df = pd.read_excel(only_included_routes_data_file_path, sheet_name=0)
     indexed_df = routes_df.set_index("mergeID").to_dict(orient="index")
-
-    # iterate over rows i.e. routes
-    for route in indexed_df:
-        for loc in ["loc1", "loc2", "loc3", "loc4"]:
-            print(f"📍 Working on: {loc}")
-            geoname_id_col = f"{loc} geoID"
-    # The above loop is informational; construction happens in helpers.
 
     # Build nodes and edges
     nodes_df = construct_nodes(indexed_df)
     edges_df = construct_edges(indexed_df)
+    timestamped_file_path = add_timestamp_to_filename(output_file_path)
 
-    # save nodes on sheet 1
-    # save edges on sheet 2
-    with pd.ExcelWriter(output_file_path, engine="openpyxl") as writer:
-        nodes_df.to_excel(writer, sheet_name="nodes", index=False)
-        edges_df.to_excel(writer, sheet_name="edges", index=False)
+    with pd.ExcelWriter(timestamped_file_path, engine="openpyxl") as writer:
+        nodes_df.to_excel(writer, sheet_name="nodes", index=False) # save nodes on sheet 1 "nodes"
+        edges_df.to_excel(writer, sheet_name="edges", index=False) # save edges on sheet 2 "edges"
 
-    return output_file_path
+    return [nodes_df, edges_df], timestamped_file_path

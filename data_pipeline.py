@@ -24,7 +24,7 @@ DATA_GEONAMES_FILENAME = "1.1_ENGdata_geoID.xlsx"
 # 1.2 deprecated
 INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME = "1.3_ENGdata_geonamesExtracted.xlsx"
 EXPLORATORY_ANALYSIS_FILENAME = "1.4_exploratory_analysis.xlsx"
-NETWORK_DATA_FILENAME = "1.5_ENGdata_network.xlsx"
+NETWORK_DATA_FILENAME = "1.5_nodes_edges.xlsx"
 ## DIRs
 ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/dphil excels/phd_analysis_data/"
 
@@ -41,27 +41,44 @@ def pre_testing():
 
 if __name__ == "__main__":
 
+    start_from_step = 1
+
     # Step 1.1 to 1.3: from data and geoID to geographical features ===================================================
-    # SKIP as done and clean
-    # TODO refactor all functions to use only the constants from this file and not local ones
-    # TODO refactor saving functionnality to use file names as parameter and append timestamp and file extension locally
-    df, latest_1_3_file_path = process_all_locations(
-        os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME),
-        os.path.join(ANALYSIS_DIR, GEONAME_DICTIONARY_FILE_PATH),
-        os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME)
-    )
-    # copy latest file to reusable file_name
-    shutil.copy(latest_1_3_file_path, os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME))
+    def step1to3():
+        df, latest_1_3_file_path = process_all_locations(
+            os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME),
+            os.path.join(ANALYSIS_DIR, DICT_GEOID_FILENAME),
+            os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME)
+        )
+        # copy the latest file to a reusable file_name
+        shutil.copy(latest_1_3_file_path, os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME))
 
     # Step 1.3 to 1.4: Exploratory analysis, diagrams and stats ======================================================
-    # SKIP as it is done
-    explo_analysis_results, latest_1_4_file_path  = run_exploratory_analysis(
-        os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME),
-        ANALYSIS_DIR,
-        os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME)
-    )
-    shutil.copy(latest_1_4_file_path, os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME))
-
+    def step3to4():
+        explo_analysis_results, latest_1_4_file_path  = run_exploratory_analysis(
+            os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME),
+            ANALYSIS_DIR,
+            os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME),
+            os.path.join(ANALYSIS_DIR, EXPLORATORY_ANALYSIS_FILENAME)
+        )
+        shutil.copy(latest_1_4_file_path, os.path.join(ANALYSIS_DIR, EXPLORATORY_ANALYSIS_FILENAME))
 
     # Step 1.3 to 1.5: transform data to edges pairs ==================================================================
-    network_data = transform2network(os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME), ANALYSIS_DIR, os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME))
+    def step3to5():
+        network_data, network_nodes_edges_file_path = transform2network(
+            os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME),
+            ANALYSIS_DIR,
+            os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME))
+        shutil.copy(network_nodes_edges_file_path, os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME))
+
+
+    # Map a sequence of pipeline
+    steps = {
+        1: step1to3,
+        2: step3to4,
+        3: step3to5,
+    }
+
+    for step in range(start_from_step, len(steps)+1):
+        steps[step]()
+

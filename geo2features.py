@@ -10,7 +10,7 @@ import time
 from numpy.f2py.auxfuncs import throw_error
 
 USERNAME = 'albertoolliaro' # geonames API requires a private username to allow more queries
-GEONAME_DICTIONARY_FILE_PATH = "./aux_geonames_ID_dictionary.xlsx"
+GEONAME_DICTIONARY_FILE_PATH = ""
 
 test_geonameID = 7285904
 
@@ -21,9 +21,12 @@ def prep_phase(data_file_path, geoname_dictionary_file_path):
         df = pd.read_excel(data_file_path, sheet_name=0)
     else:
         print("❌ No input file found, aborting method.")
-        return
+        return None
 
     df = df[df["include"] > 0]
+
+    df = df.drop(columns=["Snippet", "Keywords Searched", "Snippet In English", "Comments", "comments in English"], errors="ignore")
+
     global GEONAME_DICTIONARY_FILE_PATH
     GEONAME_DICTIONARY_FILE_PATH = geoname_dictionary_file_path
 
@@ -33,7 +36,7 @@ def prep_phase(data_file_path, geoname_dictionary_file_path):
         geonames_dict_cache = geonames_dict_df.set_index("geonameId").to_dict(orient="index")
     else:
         print("📁 No dictionary found, starting fresh.")
-        geonames_dict_cache: dict[Hashable, str] = {}
+        geonames_dict_cache = {}
 
     return df, geonames_dict_cache
 
@@ -65,7 +68,7 @@ def query_geonames_api(geoname_id):
 
     geo_elements = root.findall("geoname")[1:] # removes the "earth" element
 
-    result: dict[str, str] = {}
+    result = {}
     if len(geo_elements) >= 1:
         result["continent"] = geo_elements[0].findtext("toponymName")
     if len(geo_elements) >= 2:
@@ -84,7 +87,7 @@ def query_geonames_api(geoname_id):
 
 
 # Fetch from cache (or update dictionary if needed) and return the country info, admin123 and continent
-def get_geonames_data(geo_id, geonames_dict_cache):
+def get_geonames_data(geo_id, geonames_dict_cache, ):
     try:
         #ignore null, empty, or "world" geoIDs
         if pd.isna(geo_id) or str(geo_id).strip().lower() == "world" or str(geo_id).strip() == "":
@@ -104,7 +107,7 @@ def get_geonames_data(geo_id, geonames_dict_cache):
 
         # Save the updated dictionary immediately
         pd.DataFrame.from_dict(geonames_dict_cache, orient="index").reset_index().rename(
-            columns={"index": "geonameId"}).to_excel(geonames_dict_cache, index=False)
+            columns={"index": "geonameId"}).to_excel(GEONAME_DICTIONARY_FILE_PATH, index=False)
         return result
 
     # we save the geonames dictionary if things crash, notably due to the API
@@ -122,6 +125,7 @@ def get_geonames_data(geo_id, geonames_dict_cache):
 def process_all_locations(data_file_path, geoname_dictionary_file_path, output_file_path):
 
     df, geonames_dict_cache = prep_phase(data_file_path, geoname_dictionary_file_path)
+
 
     for loc in ["loc1", "loc2", "loc3", "loc4"]:
         print(f"📍 Working on: {loc}")
