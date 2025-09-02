@@ -1,3 +1,5 @@
+from typing import Any, Hashable
+
 import pandas as pd
 import requests
 import xml.etree.ElementTree as ET
@@ -31,7 +33,7 @@ def prep_phase(data_file_path, geoname_dictionary_file_path):
         geonames_dict_cache = geonames_dict_df.set_index("geonameId").to_dict(orient="index")
     else:
         print("📁 No dictionary found, starting fresh.")
-        geonames_dict_cache = {}
+        geonames_dict_cache: dict[Hashable, str] = {}
 
     return df, geonames_dict_cache
 
@@ -39,6 +41,7 @@ def prep_phase(data_file_path, geoname_dictionary_file_path):
 def add_timestamp_to_filename(file_path):
     root, ext = os.path.splitext(file_path)
     return f"{root}_{datetime.now().strftime("%Y%m%d%H%M%S")}{ext}"
+
 
 def save_df_to_file(file_path, df):
     timestamped_file_path = add_timestamp_to_filename(file_path)
@@ -62,7 +65,7 @@ def query_geonames_api(geoname_id):
 
     geo_elements = root.findall("geoname")[1:] # removes the "earth" element
 
-    result = {}
+    result: dict[str, str] = {}
     if len(geo_elements) >= 1:
         result["continent"] = geo_elements[0].findtext("toponymName")
     if len(geo_elements) >= 2:
@@ -71,11 +74,11 @@ def query_geonames_api(geoname_id):
         result["geoname_country_lat"] = geo_elements[1].findtext("lat")
         result["geoname_country_lon"] = geo_elements[1].findtext("lng")
     if len(geo_elements) >= 3:
-        result["ADM1"] = geo_elements[2].findtext("toponymName")
+        result["ADM1"] = geo_elements[2].findtext("toponymName") # admin levels often indicate "region, district, state"
     if len(geo_elements) >= 4:
-        result["ADM2"] = geo_elements[3].findtext("toponymName")
+        result["ADM2"] = geo_elements[3].findtext("toponymName") # which is helpful to understand the context
     if len(geo_elements) >= 5:
-        result["ADM3"] = geo_elements[4].findtext("toponymName")
+        result["ADM3"] = geo_elements[4].findtext("toponymName") # especially on visual/graph/diagrams
 
     return result
 
@@ -124,7 +127,10 @@ def process_all_locations(data_file_path, geoname_dictionary_file_path, output_f
         print(f"📍 Working on: {loc}")
         geoname_id_col = f"{loc} geoID"
 
-        # pairs of [A, B]: new column name A, which comes after the column B
+        # Because I want the Excel to be human-readable,
+        # I place the location's attributes from geonames (cont, country, admins)
+        # in the columns after the raw(coded) location geonameID:
+        # the pairs of [A, B]: new column A, which must come after column B
         new_columns = [
             ("geoname_cont", "location as stated"),
             ("geoname_country", "geoname_cont"),
@@ -146,18 +152,18 @@ def process_all_locations(data_file_path, geoname_dictionary_file_path, output_f
 
         # Apply lookup on the get_geonames_data() for each row with lambdas
         try:
-            df[f"{loc} geoname_cont"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x).get("continent"))
+            df[f"{loc} geoname_cont"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("continent"))
             df[f"{loc} geoname_country"] = df[geoname_id_col].apply(
-                lambda x: get_geonames_data(x).get("geoname_countryName"))
+                lambda x: get_geonames_data(x, geonames_dict_cache).get("geoname_countryName"))
             df[f"{loc} geoname_country_geoId"] = df[geoname_id_col].apply(
-                lambda x: get_geonames_data(x).get("geoname_country_geoId"))
+                lambda x: get_geonames_data(x, geonames_dict_cache).get("geoname_country_geoId"))
             df[f"{loc} geoname_country_lat"] = df[geoname_id_col].apply(
-                lambda x: get_geonames_data(x).get("geoname_country_lat"))
+                lambda x: get_geonames_data(x, geonames_dict_cache).get("geoname_country_lat"))
             df[f"{loc} geoname_country_lon"] = df[geoname_id_col].apply(
-                lambda x: get_geonames_data(x).get("geoname_country_lon"))
-            df[f"{loc} geoname_ADM1"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x).get("ADM1"))
-            df[f"{loc} geoname_ADM2"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x).get("ADM2"))
-            df[f"{loc} geoname_ADM3"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x).get("ADM3"))
+                lambda x: get_geonames_data(x, geonames_dict_cache).get("geoname_country_lon"))
+            df[f"{loc} geoname_ADM1"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM1"))
+            df[f"{loc} geoname_ADM2"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM2"))
+            df[f"{loc} geoname_ADM3"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM3"))
         except RuntimeError:
             print("⛔ Process halted due to API limit.")
             break
