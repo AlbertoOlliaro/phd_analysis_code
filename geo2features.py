@@ -71,17 +71,19 @@ def query_geonames_api(geoname_id):
     result = {}
     if len(geo_elements) >= 1:
         result["continent"] = geo_elements[0].findtext("toponymName")
-    if len(geo_elements) >= 2:
-        result["geoname_countryName"] = geo_elements[1].findtext("name")
-        result["geoname_country_geoId"] = geo_elements[1].findtext("geonameId")
-        result["geoname_country_lat"] = geo_elements[1].findtext("lat")
-        result["geoname_country_lon"] = geo_elements[1].findtext("lng")
-    if len(geo_elements) >= 3:
-        result["ADM1"] = geo_elements[2].findtext("toponymName") # admin levels often indicate "region, district, state"
-    if len(geo_elements) >= 4:
-        result["ADM2"] = geo_elements[3].findtext("toponymName") # which is helpful to understand the context
-    if len(geo_elements) >= 5:
-        result["ADM3"] = geo_elements[4].findtext("toponymName") # especially on visual/graph/diagrams
+        result["geoname_continent_lat"] = geo_elements[0].findtext("lat")
+        result["geoname_continent_lon"] = geo_elements[0].findtext("lng")
+        if len(geo_elements) >= 2:
+            result["geoname_countryName"] = geo_elements[1].findtext("name")
+            result["geoname_country_geoId"] = geo_elements[1].findtext("geonameId")
+            result["geoname_country_lat"] = geo_elements[1].findtext("lat")
+            result["geoname_country_lon"] = geo_elements[1].findtext("lng")
+            if len(geo_elements) >= 3:
+                result["ADM1"] = geo_elements[2].findtext("toponymName") # admin levels often indicate "region, district, state"
+                if len(geo_elements) >= 4:
+                    result["ADM2"] = geo_elements[3].findtext("toponymName") # which is helpful to understand the context
+                    if len(geo_elements) >= 5:
+                        result["ADM3"] = geo_elements[4].findtext("toponymName") # especially on visual/graph/diagrams
 
     return result
 
