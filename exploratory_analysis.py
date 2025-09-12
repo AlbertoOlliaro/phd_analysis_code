@@ -44,9 +44,12 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
         print(f">Included articles count: {total_articles_count}")
 
         # 1.2 Count articles that are include=1 (article means only the first route which ends with -1 as the others are routes within that article)
-        included_articles_count = len(included_df['mergeID'].str.endswith('-1'))
+        included_articles_count = included_df['mergeID'].str.endswith('-1').sum()
+        total_routes_count = len(included_df['mergeID'])
         results['included_articles_count'] = included_articles_count
+        results['total_routes_count'] = total_routes_count
         print(f">Included articles count: {included_articles_count}")
+        print(f">Total routes count: {total_routes_count}")
 
         # 2.1 Count articles per year ----------------------------------------------------------------------------------
         total_articles_per_year = df_full[(
@@ -137,16 +140,14 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
         print(f"Intermediary_percentage: {intermediary_percentage}%")
 
         # 9.3 Calculate clear intermediaries as first point role percentage --------------------------------------------
-        unknown_percentage = (
-                included_df['loc1 node role'].str.contains('unknown', case=False, na=False).mean() * 100
-        )
-        print(f"Unknown_percentage: {unknown_percentage}%")
+        other_percentage = 100-manufacturing_percentage-origin_percentage-intermediary_percentage
+        print(f"other_percentage: {other_percentage}%")
 
         first_node_stats = pd.Series({
             'origin': int(origin_percentage),
             'intermediary': int(intermediary_percentage),
             'manufacturing': int(manufacturing_percentage),
-            'unknown': int(unknown_percentage)
+            'other': int(other_percentage) # assembly
         })
         results['first_node_stats'] = first_node_stats
 
@@ -173,13 +174,14 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
         # Prepare writeables to avoid errors (no .to_frame() on scalars/sets)
         total_articles_count_df = pd.DataFrame({'total_articles_count': [results['total_articles_count']]})
         included_articles_count_df = pd.DataFrame({'included_articles_count': [results['included_articles_count']]})
+        total_routes_count = pd.DataFrame({'total_routes_count': [results['total_routes_count']]})
         included_routes_per_year_df = results['included_routes_per_year'].to_frame(name='count')
         total_articles_per_year_df = total_articles_per_year.to_frame(name='count')
         included_articles_per_year_df = included_articles_per_year.to_frame(name='count')
         routes_by_length_df = results['count_of_routes_per_length'].to_frame(name='count')
         medicine_quality_counts_df = medicine_quality_counts.to_frame(name='count')
         individuals_stats_df = results['individuals_stats'].to_frame(name='value')
-        first_node_stats_df = results['first_node_stats'].to_frame(name='count')
+        first_node_stats_df = results['first_node_stats'].to_frame(name='percentage')
         unique_countries_count_df = pd.DataFrame({'unique_countries_count': [results['unique_countries_count']]})
         unique_countries_list_df = pd.Series(
             sorted(results['unique_countries_list'])
@@ -189,6 +191,7 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
         with pd.ExcelWriter(analysis_file_path) as writer:
             total_articles_count_df.to_excel(writer, sheet_name='Total_Articles', index=False)
             included_articles_count_df.to_excel(writer, sheet_name='Total_Included_Articles', index=False)
+            total_routes_count.to_excel(writer, sheet_name='Total_Routes', index=False)
             total_articles_per_year_df.to_excel(writer, sheet_name='Articles_per_Year')
             included_articles_per_year_df.to_excel(writer, sheet_name='Included_Articles_per_Year')
             included_routes_per_year_df.to_excel(writer, sheet_name='Included_Routes_per_Year')
@@ -209,7 +212,7 @@ def run_exploratory_analysis(data_only_included_file_path, output_dir, full_data
         with open(results_path, "wb") as f:
             pickle.dump(results, f)
         print(f"Saved exploratory analysis results to: {results_path}")
-        return results
+        return results, []
 
     print("Full exploratory analysis success")
     return results, analysis_file_path

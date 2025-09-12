@@ -8,14 +8,15 @@ def create_and_plot_sankey_diagram_phd_data(data, output_path):
     labels = [
         "English",
         "2018", "2019", "2020", "2021", "2022",  # articles per year
-        "2018 reports", "2019 reports", "2020 reports", "2021 reports", "2022 reports",  # included articles per year
+        "2018 included reports", "2019 included reports", "2020 included reports", "2021 included reports", "2022 included reports",  # included articles per year
         "2018 routes", "2019 routes", "2020 routes", "2021 routes", "2022 routes"  # included routes per year
+        , "total included routes" # total number of routes included
     ]
 
     # The source[x] target[x] pairs define the connections between the nodes
     # Uses the indices of the nodes in the 'labels' list
-    source = [0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    target = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    source = [0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    target = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16 ,16 ,16 ,16]
     # values are the "thickness" of each chord
     values = []
 
@@ -24,6 +25,7 @@ def create_and_plot_sankey_diagram_phd_data(data, output_path):
     # Build a flat list of numeric values in the order required by source/target
     years_int = [int(y) for y in years]
     values.extend([int(data['total_articles_per_year'].get(y, 0)) for y in years_int])
+    values.extend([int(data['included_articles_per_year'].get(y, 0)) for y in years_int])
     values.extend([int(data['included_articles_per_year'].get(y, 0)) for y in years_int])
     values.extend([int(data['included_routes_per_year'].get(y, 0)) for y in years_int])
 
@@ -37,12 +39,13 @@ def create_and_plot_sankey_diagram_phd_data(data, output_path):
         # number of ROUTES per year
         labels[indx + years_count * 2] = labels[indx + years_count * 2] + ": " + str(
             data['included_routes_per_year'].get(int(year), 0))
+    labels[len(labels) - 1] = labels[len(labels) - 1] + ": " + str(data['total_routes_count'])
 
     # Create the Sankey diagram ----------------------------------------------------------------------------------------
     fig = go.Figure(go.Sankey(
         node=dict(
             pad=15,
-            thickness=20,  # restored original thickness
+            thickness=20,
             line=dict(color="black", width=0.5),
             label=labels,
         ),

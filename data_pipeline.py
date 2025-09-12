@@ -26,7 +26,13 @@ INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME = "1.3_ENGdata_geonamesExtracted.x
 EXPLORATORY_ANALYSIS_FILENAME = "1.4_exploratory_analysis.xlsx"
 NETWORK_DATA_FILENAME = "1.5_nodes_edges.xlsx"
 ## DIRs
-ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/dphil excels/phd_analysis_data/"
+ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data/"
+## OTHERS
+GROUP_EUROPE = True
+
+def add_suffix_to_filename(file_path, suffix):
+    root, ext = os.path.splitext(file_path)
+    return f"{root}_{suffix}{ext}"
 
 def pre_testing():
     """
@@ -41,7 +47,16 @@ def pre_testing():
 
 if __name__ == "__main__":
 
+    if GROUP_EUROPE:
+        ## output files
+        DATA_GEONAMES_FILENAME = add_suffix_to_filename(DATA_GEONAMES_FILENAME, "_grpEU")
+        # 1.2 deprecated
+        INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME = add_suffix_to_filename(INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME, "_grpEU")
+        EXPLORATORY_ANALYSIS_FILENAME = add_suffix_to_filename(EXPLORATORY_ANALYSIS_FILENAME, "_grpEU")
+        NETWORK_DATA_FILENAME = add_suffix_to_filename(NETWORK_DATA_FILENAME, "_grpEU")
+
     start_from_step = 1
+    end_step = 3
 
     # Step 1.1 to 1.3: from data and geoID to geographical features ===================================================
     def step1to3():
@@ -79,6 +94,6 @@ if __name__ == "__main__":
         3: step3to5,
     }
 
-    for step in range(start_from_step, len(steps)+1):
+    for step in range(start_from_step, end_step+1):
         steps[step]()
 
