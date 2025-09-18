@@ -107,7 +107,7 @@ def construct_edges(indexed_df):
             src = stops[i]
             tgt = stops[i + 1]
             edges.append({
-                "ID": f"{merge_id}_{i+1}",
+                "ID": f"{merge_id}_{i+1}", # looks like 12345-X_Y (X is the route number and Y is the segment in that route)
                 "Source": src["id"],
                 "Target": tgt["id"],
                 "Label": f"{src['name']} -> {tgt['name']}" if src["name"] or tgt["name"] else "",
