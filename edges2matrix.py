@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import numpy as np
-from pandas import Series
 
 BASE_COUNTRY_ORDER = ["Ireland", "United Kingdom", "Portugal", "Spain", "France", "Belgium", "The Netherlands",
                       "Switzerland", "Italy", "Malta", "Germany", "Denmark", "Poland", "Lithuania", "Serbia",
@@ -111,28 +110,71 @@ def save_adjacency_matrix_to_txt_for_circos(ordered_matrix, labels_ordered_clock
     print(f"Adjacency matrix saved to {output_txt_file_path}")
 
 
-def group_countries_by_region(adj_matrix_country_norm, country_to_region_dict):
+def aggregate_adjacency_by_region(
+    adj_matrix_country: np.ndarray,
+    country_to_region_dict: dict,
+    binary: bool = False,
+    remove_self_loops: bool = False,
+) -> np.ndarray:
     """
-    used on the normalised data/adj matrix ideally
+    Aggregate a country-level adjacency matrix into a region-level adjacency matrix.
+    This method achieves this by computing R = M^T * A * M
+    R: region adjacency matrix (T transpose)
+    A: country adjacency matrix
+    M: incidence matrix (#regions * #countries)
     Args:
-        nodes_geoid_to_name:
-        edges: df of edges
+        adj_matrix_country: (Nc x Nc) numpy array. Rows/cols must align with countries_clockwise.
+        countries_clockwise: list of Nc country names in the same order as adj_matrix_country axes.
+        regions_clockwise: list of Nr region names in the desired output order.
+        country_to_region_dict: dict mapping country -> region.
+        binary: if True, convert any positive counts in the resulting region matrix to 1.
+        remove_self_loops: if True, zero out the diagonal of the resulting region matrix.
 
-    Returns: a list of edges where all edges are regions instead of countries
-
+    Returns:
+        (Nr x Nr) numpy array where entry (i, j) is the sum of flows from region i to region j.
     """
+    Nc = len(countries_clockwise)
+    Nr = len(regions_clockwise)
 
-    # Initialize an empty adjacency matrix
-    size = len(regions_clockwise)
-    adjacency_matrix_by_region = np.zeros((size, size), dtype=int)
+    if adj_matrix_country.shape != (Nc, Nc):
+        raise ValueError(
+            f"adj_matrix_country shape {adj_matrix_country.shape} does not match "
+            f"countries list length {Nc}"
+        )
 
-    for idx, region in enumerate(regions_clockwise):
-        for country in countries_clockwise:
-            if country_to_region_dict[country] == region:
-                adjacency_matrix_by_region[idx, idx] += adj_matrix_country_norm[
-                    countries_clockwise.index(country), countries_clockwise.index(country)]
+    # Build incidence matrix M (Nc x Nr): country -> region
+    M = np.zeros((Nc, Nr), dtype=int)
+    region_index = {r: idx for idx, r in enumerate(regions_clockwise)}
 
-    return adjacency_matrix_by_region, regions_clockwise
+    missing_countries = []
+    missing_regions = []
+    for i, country in enumerate(countries_clockwise):
+        region = country_to_region_dict.get(country)
+        if region is None:
+            missing_countries.append(country)
+            continue
+        j = region_index.get(region)
+        if j is None:
+            missing_regions.append(region)
+            continue
+        M[i, j] = 1
+
+    if missing_countries:
+        raise KeyError(f"Countries missing in country_to_region_dict: {missing_countries}")
+    if missing_regions:
+        raise KeyError(f"Regions not found in regions_clockwise: {sorted(set(missing_regions))}")
+
+    # Aggregate: R = M^T * A * M
+    region_adj = M.T @ adj_matrix_country @ M
+
+    if binary:
+        region_adj = (region_adj > 0).astype(int)
+
+    if remove_self_loops:
+        np.fill_diagonal(region_adj, 0)
+
+    return region_adj
+
 
 
 if __name__ == "__main__":
@@ -176,7 +218,7 @@ if __name__ == "__main__":
     # Create a non-weighted (normalised) adjacency matrix
     output_adjacency_matrix_norm = create_adjacency_matrix(edges, nodes_geoid_to_name, countries_clockwise, norm=True)
     # convert the country normalised matrixed to a regions' adjacency matrix
-    output_adjacency_matrix_regions = group_countries_by_region(output_adjacency_matrix_norm, country_to_region_dict)
+    output_adjacency_matrix_regions = aggregate_adjacency_by_region(output_adjacency_matrix_norm, country_to_region_dict)
 
     # Save weighted adjacency matrix to CSV and XLSX
     save_adjacency_matrix(output_adjacency_matrix, countries_clockwise, output_csv_file_path, output_xlsx_file_path)
