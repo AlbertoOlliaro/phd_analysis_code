@@ -21,7 +21,8 @@ from geo2features import *
 DICT_GEOID_FILENAME = "aux_geonames_ID_dictionary.xlsx"
 ## output files
 DATA_GEONAMES_FILENAME = "1.1_ENGdata_geoID.xlsx"
-# 1.2 deprecated
+# 1.2 are cleaned column values (clean or merge similar FMP, clean node type, etc)
+DATA_CLEANED_Categories = "1.2_ENGdata_cleanedCategories.xlsx"
 INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME = "1.3_ENGdata_geonamesExtracted.xlsx"
 EXPLORATORY_ANALYSIS_FILENAME = "1.4_exploratory_analysis.xlsx"
 NETWORK_DATA_FILENAME = "1.5_nodes_edges.xlsx"
@@ -58,8 +59,18 @@ if __name__ == "__main__":
     start_from_step = 1
     end_step = 3
 
-    # Step 1.1 to 1.3: from data and geoID to geographical features ===================================================
-    def step1to3():
+    # Step 1.1 to 1.2: from data and geoID to geographical features ===================================================
+    def step1to2():
+        df, latest_1_2_file_path = process_all_locations(
+            os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME),
+            os.path.join(ANALYSIS_DIR, DICT_GEOID_FILENAME),
+            os.path.join(ANALYSIS_DIR, )
+        )
+        # copy the latest file to a reusable file_name
+        shutil.copy(latest_1_2_file_path, os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME))
+
+    # Step 1.2 to 1.3: from data and geoID to geographical features ===================================================
+    def step2to3():
         df, latest_1_3_file_path = process_all_locations(
             os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME),
             os.path.join(ANALYSIS_DIR, DICT_GEOID_FILENAME),

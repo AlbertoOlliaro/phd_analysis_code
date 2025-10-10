@@ -225,8 +225,6 @@ if __name__ == "__main__":
     # Save weighted adjacency matrix to TXT - for Circos chord graph visualisation
     save_adjacency_matrix_to_txt_for_circos(output_adjacency_matrix, countries_clockwise, output_txt_file_path)
     # Save normalised adjacency matrix to TXT - for Circos chord graph visualisation
-    save_adjacency_matrix_to_txt_for_circos(output_adjacency_matrix_norm, countries_clockwise,
-                                            output_txt_file_path_norm)
+    save_adjacency_matrix_to_txt_for_circos(output_adjacency_matrix_norm, countries_clockwise, output_txt_file_path_norm)
     # Save normalised adjacency matrix of regions to .txt - for Circos chord graph visualisation
-    save_adjacency_matrix_to_txt_for_circos(output_adjacency_matrix_regions, regions_clockwise,
-                                            output_txt_file_path_regions_norm)
+    save_adjacency_matrix_to_txt_for_circos(output_adjacency_matrix_regions, regions_clockwise, output_txt_file_path_regions_norm)

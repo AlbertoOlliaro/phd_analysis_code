@@ -75,6 +75,7 @@ def query_geonames_api(geoname_id):
         result["geoname_continent_lon"] = geo_elements[0].findtext("lng")
         if len(geo_elements) >= 2:
             result["geoname_countryName"] = geo_elements[1].findtext("name")
+            result["geoname_countryCode"] = geo_elements[1].findtext("countryCode")
             result["geoname_country_geoId"] = geo_elements[1].findtext("geonameId")
             result["geoname_country_lat"] = geo_elements[1].findtext("lat")
             result["geoname_country_lon"] = geo_elements[1].findtext("lng")
@@ -161,6 +162,8 @@ def process_all_locations(data_file_path, geoname_dictionary_file_path, output_f
             df[f"{loc} geoname_cont"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("continent"))
             df[f"{loc} geoname_country"] = df[geoname_id_col].apply(
                 lambda x: get_geonames_data(x, geonames_dict_cache).get("geoname_countryName"))
+            df[f"{loc} geoname_countryCode"] = df[geoname_id_col].apply(
+                lambda x: get_geonames_data(x, geonames_dict_cache).get("geoname_countryCode"))
             df[f"{loc} geoname_country_geoId"] = df[geoname_id_col].apply(
                 lambda x: get_geonames_data(x, geonames_dict_cache).get("geoname_country_geoId"))
             df[f"{loc} geoname_country_lat"] = df[geoname_id_col].apply(
