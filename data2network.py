@@ -28,19 +28,20 @@ def construct_nodes(indexed_df):
 
     """
 
-    node_attributes_col = ["geoname_country", "geoname_country_geoId", "geoname_country_lat", "geoname_country_lon"]
+    node_attributes_col = ["geoname_country", "geoname_country_geoId", "geoname_country_lat", "geoname_country_lon", "geoname_countryCode"]
     nodes_by_id = {}
 
 # TODO use the "aux_geonames_ID_dictionary" file instead:
     #  use the country geoID and name and lat lon columns only, make a set, done
     for loc in ["loc1", "loc2", "loc3", "loc4"]:
         name_col = f"{loc} {node_attributes_col[0]}"
-        geoId_col = f"{loc} {node_attributes_col[1]}"
+        geo_id_col = f"{loc} {node_attributes_col[1]}"
         lat_col = f"{loc} {node_attributes_col[2]}"
         lon_col = f"{loc} {node_attributes_col[3]}"
+        country_code = f"{loc} {node_attributes_col[4]}"
 
         for _, row in indexed_df.items():
-            geo_id = row.get(geoId_col)
+            geo_id = row.get(geo_id_col)
             if pd.isna(geo_id) or str(geo_id).strip() == "" or str(geo_id).strip().lower() == "world":
                 continue
 
@@ -48,6 +49,7 @@ def construct_nodes(indexed_df):
             if node_id not in nodes_by_id:
                 # Fetch attributes (first occurrence wins)
                 country_name = row.get(name_col)
+                country_code = row.get(country_code)
                 lat = row.get(lat_col)
                 lon = row.get(lon_col)
 
@@ -57,6 +59,7 @@ def construct_nodes(indexed_df):
                     "lon": lon,
                     "country_name": None if pd.isna(country_name) else str(country_name),
                     "country_geoId": node_id,
+                    "countryCode": country_code,
                 }
 
     nodes_df = pd.DataFrame(list(nodes_by_id.values())).drop_duplicates(subset=["ID"]).reset_index(drop=True)

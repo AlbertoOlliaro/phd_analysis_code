@@ -4,6 +4,7 @@ from wordcloud import WordCloud
 
 def create_wordcloud(text_dataframe, output_path, title):
 
+# TODO the data cleanup (or merging terms) should probably happen here for the products names
     phrases = (
         text_dataframe.dropna().astype(str).str.split(';')
         .explode()

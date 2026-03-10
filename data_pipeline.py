@@ -13,6 +13,7 @@ The pipeline uses intermediary files between steps for data persistence, validat
 import shutil
 
 from data2network import transform2network
+from data_cleanup import clean_categories
 from exploratory_analysis import *
 from geo2features import *
 
@@ -22,14 +23,14 @@ DICT_GEOID_FILENAME = "aux_geonames_ID_dictionary.xlsx"
 ## output files
 DATA_GEONAMES_FILENAME = "1.1_ENGdata_geoID.xlsx"
 # 1.2 are cleaned column values (clean or merge similar FMP, clean node type, etc)
-DATA_CLEANED_Categories = "1.2_ENGdata_cleanedCategories.xlsx"
+DATA_CLEANED_CATEGORIES = "1.2_ENGdata_cleanedCategories.xlsx"
 INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME = "1.3_ENGdata_geonamesExtracted.xlsx"
 EXPLORATORY_ANALYSIS_FILENAME = "1.4_exploratory_analysis.xlsx"
 NETWORK_DATA_FILENAME = "1.5_nodes_edges.xlsx"
 ## DIRs
 ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data/"
 ## OTHERS
-GROUP_EUROPE = True
+GROUP_EUROPE = False
 
 def add_suffix_to_filename(file_path, suffix):
     root, ext = os.path.splitext(file_path)
@@ -48,6 +49,8 @@ def pre_testing():
 
 if __name__ == "__main__":
 
+    pre_testing()
+
     if GROUP_EUROPE:
         ## output files
         DATA_GEONAMES_FILENAME = add_suffix_to_filename(DATA_GEONAMES_FILENAME, "_grpEU")
@@ -56,21 +59,26 @@ if __name__ == "__main__":
         EXPLORATORY_ANALYSIS_FILENAME = add_suffix_to_filename(EXPLORATORY_ANALYSIS_FILENAME, "_grpEU")
         NETWORK_DATA_FILENAME = add_suffix_to_filename(NETWORK_DATA_FILENAME, "_grpEU")
 
-    start_from_step = 1
-    end_step = 3
+    start_from_step = 2
+    end_step = 4
 
-    # Step 1.1 to 1.2: from data and geoID to geographical features ===================================================
+    # Step 1.1 to 1.2: from data and to cleaned categories, text, etc =================================================
     def step1to2():
-        df, latest_1_2_file_path = process_all_locations(
+        """
+        WIP: FMP and node role and node type need cleaning into a file v1.2 (step 2 re-instated as a "cleanup" step)
+        TODO: programmatically clean those columns
+        """
+        print("Step 1.1 to 1.2: from data and to cleaned categories, text, etc")
+        df, latest_1_2_file_path = clean_categories(
             os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME),
-            os.path.join(ANALYSIS_DIR, DICT_GEOID_FILENAME),
-            os.path.join(ANALYSIS_DIR, )
+            os.path.join(ANALYSIS_DIR, DATA_CLEANED_CATEGORIES)
         )
         # copy the latest file to a reusable file_name
-        shutil.copy(latest_1_2_file_path, os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME))
+        shutil.copy(latest_1_2_file_path, os.path.join(ANALYSIS_DIR, DATA_CLEANED_CATEGORIES))
 
     # Step 1.2 to 1.3: from data and geoID to geographical features ===================================================
     def step2to3():
+        print("Step 1.2 to 1.3: from data and geoID to geographical features")
         df, latest_1_3_file_path = process_all_locations(
             os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME),
             os.path.join(ANALYSIS_DIR, DICT_GEOID_FILENAME),
@@ -81,6 +89,7 @@ if __name__ == "__main__":
 
     # Step 1.3 to 1.4: Exploratory analysis, diagrams and stats ======================================================
     def step3to4():
+        print("Step 1.3 to 1.4: Exploratory analysis, diagrams and stats")
         explo_analysis_results, latest_1_4_file_path  = run_exploratory_analysis(
             os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME),
             ANALYSIS_DIR,
@@ -91,6 +100,7 @@ if __name__ == "__main__":
 
     # Step 1.3 to 1.5: transform data to edges pairs ==================================================================
     def step3to5():
+        print("Step 1.3 to 1.5: transform data to edges pairs")
         network_data, network_nodes_edges_file_path = transform2network(
             os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME),
             ANALYSIS_DIR,
@@ -100,9 +110,10 @@ if __name__ == "__main__":
 
     # Map a sequence of pipeline
     steps = {
-        1: step1to3,
-        2: step3to4,
-        3: step3to5,
+        1: step1to2,
+        2: step2to3,
+        3: step3to4,
+        4: step3to5,
     }
 
     for step in range(start_from_step, end_step+1):

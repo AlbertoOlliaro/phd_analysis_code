@@ -188,16 +188,17 @@ def test_query_geonames_api():
     calling http://api.geonames.org/hierarchy?geonameId=7285904&username=albertoolliaro
     """
     result_hierarchy = ["Europe", "Switzerland", "Canton de Genève", "Geneva", "Genthod",
-                        "2658434", "47.00016", "8.01427"]
+                        "2658434", "47.00016", "8.01427", "CH"]
     # Arrange
     api_result = query_geonames_api(test_geonameID)
 
     cont = api_result.get("continent")
     country = api_result.get("geoname_countryName")
+    country_code = api_result.get("geoname_countryCode")
     admin1 = api_result.get("ADM1")
     admin2 = api_result.get("ADM2")
     admin3 = api_result.get("ADM3")
-    country_geoId = api_result.get("geoname_country_geoId")
+    country_geoid = api_result.get("geoname_country_geoId")
     country_lat = api_result.get("geoname_country_lat")
     country_lon = api_result.get("geoname_country_lon")
 
@@ -207,7 +208,8 @@ def test_query_geonames_api():
     assert result_hierarchy[2] == admin1, f"Test failed! Expected '{result_hierarchy[2]}', but got '{admin1}'."
     assert result_hierarchy[3] == admin2, f"Test failed! Expected '{result_hierarchy[3]}', but got '{admin2}'."
     assert result_hierarchy[4] == admin3, f"Test failed! Expected '{result_hierarchy[4]}', but got '{admin3}'."
-    assert result_hierarchy[5] == country_geoId, f"Test failed! Expected '{result_hierarchy[5]}', but got '{country_geoId}'."
+    assert result_hierarchy[5] == country_geoid, f"Test failed! Expected '{result_hierarchy[5]}', but got '{country_geoid}'."
     assert result_hierarchy[6] == country_lat, f"Test failed! Expected '{result_hierarchy[6]}', but got '{country_lat}'."
     assert result_hierarchy[7] == country_lon, f"Test failed! Expected '{result_hierarchy[7]}', but got '{country_lon}'."
+    assert result_hierarchy[8] == country_code, f"Test failed! Expected '{result_hierarchy[8]}', but got '{country_code}'."
 
