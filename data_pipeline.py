@@ -62,7 +62,7 @@ if __name__ == "__main__":
         EXPLORATORY_ANALYSIS_FILENAME = add_suffix_to_filename(EXPLORATORY_ANALYSIS_FILENAME, "_grpEU")
         NETWORK_DATA_FILENAME = add_suffix_to_filename(NETWORK_DATA_FILENAME, "_grpEU")
 
-    start_from_step = 1
+    start_from_step = 4
     end_step = 4
 
     # Step 1.1 to 1.2: from data and to cleaned categories, text, etc =================================================

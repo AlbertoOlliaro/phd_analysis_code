@@ -38,7 +38,7 @@ def construct_nodes(indexed_df):
         geo_id_col = f"{loc} {node_attributes_col[1]}"
         lat_col = f"{loc} {node_attributes_col[2]}"
         lon_col = f"{loc} {node_attributes_col[3]}"
-        country_code = f"{loc} {node_attributes_col[4]}"
+        country_code_col = f"{loc} {node_attributes_col[4]}"
 
         for _, row in indexed_df.items():
             geo_id = row.get(geo_id_col)
@@ -49,7 +49,7 @@ def construct_nodes(indexed_df):
             if node_id not in nodes_by_id:
                 # Fetch attributes (first occurrence wins)
                 country_name = row.get(name_col)
-                country_code = row.get(country_code)
+                country_code = row.get(country_code_col)
                 lat = row.get(lat_col)
                 lon = row.get(lon_col)
 
