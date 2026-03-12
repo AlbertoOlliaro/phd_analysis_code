@@ -20,15 +20,16 @@ from geo2features import *
 # Paths and filenames
 ## dictionaries and aux files
 DICT_GEOID_FILENAME = "aux_geonames_ID_dictionary.xlsx"
+DICT_CLEANUP_FILENAME = "aux_cleanup_dictionary.xlsx"
 ## output files
-DATA_GEONAMES_FILENAME = "1.1_ENGdata_geoID.xlsx"
-# 1.2 are cleaned column values (clean or merge similar FMP, clean node type, etc)
-DATA_CLEANED_CATEGORIES = "1.2_ENGdata_cleanedCategories.xlsx"
+DATA_GEONAMES_FILENAME = "1.1_ENGdata_geoID.xlsx" # IMPORTANT! file 1.1 has a lot of manual cleaning, do not use 1.0
+DATA_CLEANED = "1.2_ENGdata_cleanedCategories.xlsx"
 INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME = "1.3_ENGdata_geonamesExtracted.xlsx"
 EXPLORATORY_ANALYSIS_FILENAME = "1.4_exploratory_analysis.xlsx"
 NETWORK_DATA_FILENAME = "1.5_nodes_edges.xlsx"
 ## DIRs
-ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data/"
+#ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data/"
+ANALYSIS_DIR = "C:/Users/alber/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data/"
 ## OTHERS
 GROUP_EUROPE = False
 
@@ -53,34 +54,36 @@ if __name__ == "__main__":
 
     if GROUP_EUROPE:
         ## output files
-        DATA_GEONAMES_FILENAME = add_suffix_to_filename(DATA_GEONAMES_FILENAME, "_grpEU")
+        # TODO move these to each step probably
+        #  DATA_GEONAMES_FILENAME = add_suffix_to_filename(DATA_GEONAMES_FILENAME, "_grpEU")
+        DATA_CLEANED = add_suffix_to_filename(DATA_CLEANED, "_grpEU")
         # 1.2 deprecated
         INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME = add_suffix_to_filename(INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME, "_grpEU")
         EXPLORATORY_ANALYSIS_FILENAME = add_suffix_to_filename(EXPLORATORY_ANALYSIS_FILENAME, "_grpEU")
         NETWORK_DATA_FILENAME = add_suffix_to_filename(NETWORK_DATA_FILENAME, "_grpEU")
 
-    start_from_step = 2
+    start_from_step = 1
     end_step = 4
 
     # Step 1.1 to 1.2: from data and to cleaned categories, text, etc =================================================
     def step1to2():
         """
-        WIP: FMP and node role and node type need cleaning into a file v1.2 (step 2 re-instated as a "cleanup" step)
-        TODO: programmatically clean those columns
+        TODO: node role and node type need cleaning into file v1.2 (match the locX mentioned to a node)
         """
         print("Step 1.1 to 1.2: from data and to cleaned categories, text, etc")
         df, latest_1_2_file_path = clean_categories(
             os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME),
-            os.path.join(ANALYSIS_DIR, DATA_CLEANED_CATEGORIES)
+            os.path.join(ANALYSIS_DIR, DICT_CLEANUP_FILENAME),
+            os.path.join(ANALYSIS_DIR, DATA_CLEANED)
         )
         # copy the latest file to a reusable file_name
-        shutil.copy(latest_1_2_file_path, os.path.join(ANALYSIS_DIR, DATA_CLEANED_CATEGORIES))
+        shutil.copy(latest_1_2_file_path, os.path.join(ANALYSIS_DIR, DATA_CLEANED))
 
     # Step 1.2 to 1.3: from data and geoID to geographical features ===================================================
     def step2to3():
         print("Step 1.2 to 1.3: from data and geoID to geographical features")
         df, latest_1_3_file_path = process_all_locations(
-            os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME),
+            os.path.join(ANALYSIS_DIR, DATA_CLEANED),
             os.path.join(ANALYSIS_DIR, DICT_GEOID_FILENAME),
             os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME)
         )
@@ -93,7 +96,7 @@ if __name__ == "__main__":
         explo_analysis_results, latest_1_4_file_path  = run_exploratory_analysis(
             os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME),
             ANALYSIS_DIR,
-            os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME),
+            os.path.join(ANALYSIS_DIR, DATA_CLEANED),
             os.path.join(ANALYSIS_DIR, EXPLORATORY_ANALYSIS_FILENAME)
         )
         shutil.copy(latest_1_4_file_path, os.path.join(ANALYSIS_DIR, EXPLORATORY_ANALYSIS_FILENAME))

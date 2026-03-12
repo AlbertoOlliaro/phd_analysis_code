@@ -1,21 +1,19 @@
+from collections import Counter
 from matplotlib import pyplot as plt
 from wordcloud import WordCloud
 
 
 def create_wordcloud(text_dataframe, output_path, title):
 
-# TODO the data cleanup (or merging terms) should probably happen here for the products names
-    phrases = (
-        text_dataframe.dropna().astype(str).str.split(';')
-        .explode()
-        .astype(str)
-        .str.strip()
-    )
-    phrases = phrases[phrases.ne('')]
-    freq = phrases.value_counts().to_dict()
+    # one data cleanup step has been done by hand and a second in the data_cleanup.py
+    text = ';'.join(text_dataframe.dropna().astype(str))
+
+    word_list = text.lower().split(';')
+
+    frequencies = Counter(word_list)
 
     # Dynamic sizing based on number of unique words
-    n_words = max(1, len(freq))
+    n_words = max(1, len(frequencies))
     aspect_ratio = 2.0  # width:height
     # Base size grows with sqrt of number of words, capped to avoid extremes
     base_height = max(300, min(1000, int(45 * (n_words ** 0.5))))
@@ -33,13 +31,13 @@ def create_wordcloud(text_dataframe, output_path, title):
         collocations=False,
         max_words=n_words,  # ensure we consider all words in freq
         min_font_size=8
-    ).generate_from_frequencies(freq)
+    ).generate_from_frequencies(frequencies)
 
     plt.figure(figsize=(width / 100, height / 100))
     plt.imshow(wordcloud, interpolation='bilinear')
     plt.axis('off')
     plt.title(title)
-    plt.savefig(output_path, dpi=100)  # dpi aligns with figsize; scale controls pixel density
+    plt.savefig(output_path, dpi=200)  # dpi aligns with figsize; scale controls pixel density
     plt.show()
     plt.close()
 
