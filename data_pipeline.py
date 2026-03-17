@@ -21,6 +21,7 @@ from geo2features import *
 ## dictionaries and aux files
 DICT_GEOID_FILENAME = "aux_geonames_ID_dictionary.xlsx"
 DICT_CLEANUP_FILENAME = "aux_cleanup_dictionary.xlsx"
+DICT_COUNTRY_TO_SUBREGION_FILENAME = "aux_country-to-region_sorted_clockwise_UNm49.xlsx" # matches each country to a subregion according to the UN m49 scheme
 ## output files
 DATA_GEONAMES_FILENAME = "1.1_ENGdata_geoID.xlsx" # IMPORTANT! file 1.1 has a lot of manual cleaning, do not use 1.0
 DATA_CLEANED = "1.2_ENGdata_cleanedCategories.xlsx"
@@ -31,7 +32,7 @@ NETWORK_DATA_FILENAME = "1.5_nodes_edges.xlsx"
 #ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data/"
 ANALYSIS_DIR = "C:/Users/alber/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data/"
 ## OTHERS
-GROUP_EUROPE = False
+
 
 def add_suffix_to_filename(file_path, suffix):
     root, ext = os.path.splitext(file_path)
@@ -52,15 +53,7 @@ if __name__ == "__main__":
 
     pre_testing()
 
-    if GROUP_EUROPE:
-        ## output files
-        # TODO move these to each step probably
-        #  DATA_GEONAMES_FILENAME = add_suffix_to_filename(DATA_GEONAMES_FILENAME, "_grpEU")
-        DATA_CLEANED = add_suffix_to_filename(DATA_CLEANED, "_grpEU")
-        # 1.2 deprecated
-        INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME = add_suffix_to_filename(INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME, "_grpEU")
-        EXPLORATORY_ANALYSIS_FILENAME = add_suffix_to_filename(EXPLORATORY_ANALYSIS_FILENAME, "_grpEU")
-        NETWORK_DATA_FILENAME = add_suffix_to_filename(NETWORK_DATA_FILENAME, "_grpEU")
+
 
     start_from_step = 4
     end_step = 4
@@ -109,9 +102,14 @@ if __name__ == "__main__":
             ANALYSIS_DIR,
             os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME))
         shutil.copy(network_nodes_edges_file_path, os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME))
+        return network_data # returned as [nodes_df, edges_df]
 
+    def rerun_on_subregions():
+        print("Rerunning edge list on subregions...")
+        print("...Removing same-country loop edges...")
+        print("...Merging nodes strategy : summing variables") # sum the properties such as node category, origin, destination, manufacturing...?
 
-    # Map a sequence of pipeline
+    # sequence of the pipeline
     steps = {
         1: step1to2,
         2: step2to3,
