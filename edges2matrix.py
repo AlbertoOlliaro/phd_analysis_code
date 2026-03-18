@@ -187,8 +187,7 @@ if __name__ == "__main__":
     output_txt_file_path_norm = os.path.join(wdir, 'adjacency_matrix_norm.txt')
     output_txt_file_path_regions_norm = os.path.join(wdir, 'adjacency_matrix_regions_norm.txt')
     output_txt_file_path = os.path.join(wdir, 'adjacency_matrix.txt')
-    input_countries_regions_file_path = os.path.join('C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis',
-                                                     'country-to-region_sorted_clockwise_UNm49.xlsx')
+    input_countries_regions_file_path = os.path.join(wdir, 'aux_country-to-region_sorted_clockwise_UNm49.xlsx')
 
     """CAREFUL this pairing list of sorted countries and corresponding regions
     has been extracted from the "1.3_ENGdata_geonamesExtracted.xlsx" file
@@ -200,15 +199,15 @@ if __name__ == "__main__":
     # df of regions indexed by country
     regions = pd.read_excel(
         input_countries_regions_file_path,
-        usecols=['country', 'region'],
+        usecols=['country', 'subregion_m49'],
         index_col='country'
     )
     # dict of regions indexed by country
-    country_to_region_dict = regions['region'].to_dict()
+    country_to_region_dict = regions['subregion_m49'].to_dict()
     # list of countries sorted "clockwise" for a circular or chord graph display
     countries_clockwise = df_countries_regions['country'].tolist()
     # list of regions sorted "clockwise" for a circular or chord graph display
-    regions_clockwise = regions['region'].unique()
+    regions_clockwise = regions['subregion_m49'].unique()
 
     # Read edges from CSV
     edges, nodes_geoid_to_name = read_edges_from_excel(edges_file_path)

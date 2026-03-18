@@ -12,7 +12,7 @@ The pipeline uses intermediary files between steps for data persistence, validat
 
 import shutil
 
-from data2network import transform2network
+from data2network import transform2network, remove_self_loops, group_countries_into_region
 from data_cleanup import clean_categories
 from exploratory_analysis import *
 from geo2features import *
@@ -28,6 +28,8 @@ DATA_CLEANED = "1.2_ENGdata_cleanedCategories.xlsx"
 INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME = "1.3_ENGdata_geonamesExtracted.xlsx"
 EXPLORATORY_ANALYSIS_FILENAME = "1.4_exploratory_analysis.xlsx"
 NETWORK_DATA_FILENAME = "1.5_nodes_edges.xlsx"
+NETWORK_DATA_NOLOOPS_FILENAME = "1.6_nodes_edges_noloops.xlsx"
+NETWORK_DATA_SUBREGIONS_FILENAME = "1.7_nodes_subregions_edges.xlsx"
 ## DIRs
 #ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data/"
 ANALYSIS_DIR = "C:/Users/alber/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data/"
@@ -63,7 +65,7 @@ if __name__ == "__main__":
         """
         TODO: node role and node type need cleaning into file v1.2 (match the locX mentioned to a node)
         """
-        print("Step 1.1 to 1.2: from data and to cleaned categories, text, etc")
+        print("Step 1.1 to 1.2: from data and to cleaner categories...")
         df, latest_1_2_file_path = clean_categories(
             os.path.join(ANALYSIS_DIR, DATA_GEONAMES_FILENAME),
             os.path.join(ANALYSIS_DIR, DICT_CLEANUP_FILENAME),
@@ -74,7 +76,7 @@ if __name__ == "__main__":
 
     # Step 1.2 to 1.3: from data and geoID to geographical features ===================================================
     def step2to3():
-        print("Step 1.2 to 1.3: from data and geoID to geographical features")
+        print("Step 1.2 to 1.3: from data and geoID to geographical features...")
         df, latest_1_3_file_path = process_all_locations(
             os.path.join(ANALYSIS_DIR, DATA_CLEANED),
             os.path.join(ANALYSIS_DIR, DICT_GEOID_FILENAME),
@@ -85,7 +87,7 @@ if __name__ == "__main__":
 
     # Step 1.3 to 1.4: Exploratory analysis, diagrams and stats ======================================================
     def step3to4():
-        print("Step 1.3 to 1.4: Exploratory analysis, diagrams and stats")
+        print("Step 1.3 to 1.4: Exploratory analysis, diagrams and stats...")
         explo_analysis_results, latest_1_4_file_path  = run_exploratory_analysis(
             os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME),
             ANALYSIS_DIR,
@@ -96,18 +98,32 @@ if __name__ == "__main__":
 
     # Step 1.3 to 1.5: transform data to edges pairs ==================================================================
     def step3to5():
-        print("Step 1.3 to 1.5: transform data to edges pairs")
+        print("Step 1.3 to 1.5: transform data to edges pairs...")
         network_data, network_nodes_edges_file_path = transform2network(
             os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME),
             ANALYSIS_DIR,
             os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME))
         shutil.copy(network_nodes_edges_file_path, os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME))
-        return network_data # returned as [nodes_df, edges_df]
 
-    def rerun_on_subregions():
-        print("Rerunning edge list on subregions...")
-        print("...Removing same-country loop edges...")
-        print("...Merging nodes strategy : summing variables") # sum the properties such as node category, origin, destination, manufacturing...?
+
+    def step5to6():
+        print("Step 1.5 to 1.6: remove same-country loop edges...")
+        network_data, network_nodes_edges_file_path = remove_self_loops(
+            os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME),
+            ANALYSIS_DIR,
+            os.path.join(ANALYSIS_DIR, NETWORK_DATA_NOLOOPS_FILENAME))
+        shutil.copy(network_nodes_edges_file_path, os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME))
+
+
+
+    def step5to7():
+        print("Step 1.5 to 1.7: merging countries into subregions...")
+        network_data, network_nodes_edges_file_path = group_countries_into_region(
+            os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME),
+            ANALYSIS_DIR,
+            os.path.join(ANALYSIS_DIR, NETWORK_DATA_NOLOOPS_FILENAME))
+        shutil.copy(network_nodes_edges_file_path, os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME))
+
 
     # sequence of the pipeline
     steps = {
@@ -115,6 +131,8 @@ if __name__ == "__main__":
         2: step2to3,
         3: step3to4,
         4: step3to5,
+        5: step5to6,
+        6: step5to7,
     }
 
     for step in range(start_from_step, end_step+1):
