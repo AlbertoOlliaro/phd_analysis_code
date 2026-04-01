@@ -152,7 +152,7 @@ def transform2network(only_included_routes_data_file_path, output_dir, output_fi
     return [nodes_df, edges_df], timestamped_file_path
 
 
-def remove_self_loops(network_data_file_path, output_dir, output_file_path):
+def remove_self_loops(network_data_file_path, output_file_path):
     """
         Produces an Excel file with network data but without loops;
         The first sheet contains the list of nodes (set of unique countries)
@@ -200,35 +200,36 @@ def group_countries_into_region(network_data_file_path, country_to_region_dict_f
     edges_df = pd.read_excel(network_data_file_path, sheet_name="edges")
 
     if os.path.exists(country_to_region_dict_file_path):
-        print("🔄 Loading existing GeoNames dictionary...")
+        print("🔄 Loading nodes as a geoID to country_ame dictionary...")
+        geo_id_to_country_name_dict = nodes_df.set_index("ID")['country_name'].to_dict()
+
+        print("🔄 Loading country to m49 subregion dictionary...")
         country_to_region_dict_temp = pd.read_excel(country_to_region_dict_file_path, sheet_name=0)
-        country_to_region_dict = country_to_region_dict_temp.set_index("key")['value'].to_dict()
+        country_to_region_dict = country_to_region_dict_temp.set_index("country")['subregion_m49'].to_dict()
+
+        print("🔄 Loading subregion m49 IDs dictionary...")
+        region_to_feature_dict_temp = pd.read_excel(country_to_region_dict_file_path, sheet_name=1)
+
     else:
         print("📁 No dictionary found.")
         return None
 
-# TODO this cannot work because in the file we use the ID as the KEY for nodes geolocations and for edges pairing
 # therefore, need to use the m49 json dictionary, create a new nodes_df with those IDs and lat-lon, and then
     # process the edges
     # need to go have a look at the edges2matrix file and how I did it there
-    new_nodes_df = nodes_df.copy()
-    new_nodes_df["region"] = nodes_df["country_name"].map(country_to_region_dict)
+    new_edges_df = edges_df.copy()
+    new_edges_df["Source"] = edges_df["Source"].map(geo_id_to_country_name_dict).map(country_to_region_dict)
+    new_edges_df["Target"] = edges_df["Target"].map(geo_id_to_country_name_dict).map(country_to_region_dict)
 
+    new_nodes_df = region_to_feature_dict_temp.copy()
+    new_nodes_df.set_index("subregion_m49")
     # print("...Merging nodes strategy : summing variables")
     # sum the properties such as node category, origin, destination, manufacturing...?
 
     timestamped_file_path = add_timestamp_to_filename(output_file_path)
 
     with pd.ExcelWriter(timestamped_file_path, engine="openpyxl") as writer:
-        nodes_df.to_excel(writer, sheet_name="nodes", index=False)  # save nodes on sheet 1 "nodes"
-        edges_df.to_excel(writer, sheet_name="edges", index=False)  # save edges on sheet 2 "edges"
+        new_nodes_df.to_excel(writer, sheet_name="nodes", index=False)  # save nodes on sheet 1 "nodes"
+        new_edges_df.to_excel(writer, sheet_name="edges", index=False)  # save edges on sheet 2 "edges"
 
     return [nodes_df, edges_df], timestamped_file_path
-
-
-
-
-def match_country_to_region(nodes_df, country_to_region_dict):
-    new_nodes_df = nodes_df.copy()
-    new_nodes_df["region"] = nodes_df["country_name"].map(country_to_region_dict)
-    return new_nodes_df

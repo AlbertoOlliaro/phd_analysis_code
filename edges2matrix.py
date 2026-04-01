@@ -181,6 +181,7 @@ if __name__ == "__main__":
     # working directory
     wdir = 'C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data'
     # File paths
+    # TODO !! Careful: should use the file paths from the data_pipeline or make a config file
     edges_file_path = os.path.join(wdir, '1.5_nodes_edges.xlsx')
     output_csv_file_path = os.path.join(wdir, 'adjacency_matrix.csv')
     output_xlsx_file_path = os.path.join(wdir, 'adjacency_matrix.xlsx')

@@ -23,7 +23,7 @@ DICT_GEOID_FILENAME = "aux_geonames_ID_dictionary.xlsx"
 DICT_CLEANUP_FILENAME = "aux_cleanup_dictionary.xlsx"
 DICT_COUNTRY_TO_SUBREGION_FILENAME = "aux_country-to-region_sorted_clockwise_UNm49.xlsx" # matches each country to a subregion according to the UN m49 scheme
 ## output files
-DATA_GEONAMES_FILENAME = "1.1_ENGdata_geoID.xlsx" # IMPORTANT! file 1.1 has a lot of manual cleaning, do not use 1.0
+DATA_GEONAMES_FILENAME = "1.1_ENGdata_geoID.xlsx" # IMPORTANT! file 1.1 has a lot of manual cleaning, do NOT use 1.0
 DATA_CLEANED = "1.2_ENGdata_cleanedCategories.xlsx"
 INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME = "1.3_ENGdata_geonamesExtracted.xlsx"
 EXPLORATORY_ANALYSIS_FILENAME = "1.4_exploratory_analysis.xlsx"
@@ -31,8 +31,8 @@ NETWORK_DATA_FILENAME = "1.5_nodes_edges.xlsx"
 NETWORK_DATA_NOLOOPS_FILENAME = "1.6_nodes_edges_noloops.xlsx"
 NETWORK_DATA_SUBREGIONS_FILENAME = "1.7_nodes_subregions_edges.xlsx"
 ## DIRs
-#ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data/"
-ANALYSIS_DIR = "C:/Users/alber/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data/"
+ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data/"
+#ANALYSIS_DIR = "C:/Users/alber/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data/"
 ## OTHERS
 
 
@@ -57,8 +57,8 @@ if __name__ == "__main__":
 
 
 
-    start_from_step = 4
-    end_step = 4
+    start_from_step = 6
+    end_step = 6
 
     # Step 1.1 to 1.2: from data and to cleaned categories, text, etc =================================================
     def step1to2():
@@ -110,19 +110,18 @@ if __name__ == "__main__":
         print("Step 1.5 to 1.6: remove same-country loop edges...")
         network_data, network_nodes_edges_file_path = remove_self_loops(
             os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME),
-            ANALYSIS_DIR,
             os.path.join(ANALYSIS_DIR, NETWORK_DATA_NOLOOPS_FILENAME))
-        shutil.copy(network_nodes_edges_file_path, os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME))
+        shutil.copy(network_nodes_edges_file_path, os.path.join(ANALYSIS_DIR, NETWORK_DATA_NOLOOPS_FILENAME))
 
 
 
     def step5to7():
         print("Step 1.5 to 1.7: merging countries into subregions...")
         network_data, network_nodes_edges_file_path = group_countries_into_region(
-            os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME),
-            ANALYSIS_DIR,
-            os.path.join(ANALYSIS_DIR, NETWORK_DATA_NOLOOPS_FILENAME))
-        shutil.copy(network_nodes_edges_file_path, os.path.join(ANALYSIS_DIR, NETWORK_DATA_FILENAME))
+            os.path.join(ANALYSIS_DIR, NETWORK_DATA_NOLOOPS_FILENAME),
+            os.path.join(ANALYSIS_DIR, DICT_COUNTRY_TO_SUBREGION_FILENAME),
+            os.path.join(ANALYSIS_DIR, NETWORK_DATA_SUBREGIONS_FILENAME))
+        shutil.copy(network_nodes_edges_file_path, os.path.join(ANALYSIS_DIR, NETWORK_DATA_SUBREGIONS_FILENAME))
 
 
     # sequence of the pipeline
