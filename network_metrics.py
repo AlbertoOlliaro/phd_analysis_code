@@ -58,9 +58,11 @@ if __name__ == "__main__":
 
     # https://networkx.org/documentation/stable/reference/functions.html
     # run the functions from the above link instead of passing by Gephi
+    # BEWARE !!
+    # IMPORTANT : remove  carret returns \r from csv files or algo will fail
 
     print("-------------------- BORGATTI GRAPH WITH COUNTRIES ----------------------")
-    filepath = 'C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/analysis/1.5_edges_verbose.csv'
+    filepath = 'C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/analysis/step3.5_edges_verbose.csv'
     G = nx.read_adjlist(filepath, comments='#', delimiter=',', create_using=None, nodetype=str, encoding='utf-8')
 
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
@@ -80,7 +82,7 @@ if __name__ == "__main__":
 
 
     print("-------------------- BORGATTI GRAPH WITH REGIONS ----------------------")
-    filepath = 'C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/analysis/1.7_subregions_edges_only.csv'
+    filepath = 'C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/analysis/step4_nodes_subregions_edges.csv'
     G = nx.read_adjlist(filepath, comments='#', delimiter=',', create_using=None, nodetype=str, encoding='utf-8')
 
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
