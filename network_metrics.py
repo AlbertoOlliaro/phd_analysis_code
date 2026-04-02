@@ -1,5 +1,7 @@
 import networkx as nx
 import itertools
+import matplotlib.pyplot as plt
+
 
 def kpp_neg(G, k):
     """
@@ -53,13 +55,44 @@ def kpp_pos(G, k):
 
 
 if __name__ == "__main__":
-    # Example graph
-    G = nx.erdos_renyi_graph(8, 0.3, seed=42)
 
-    # KPP-NEG: Disrupt network
-    neg_nodes, frag_score = kpp_neg(G, k=2)
-    print(f"KPP-NEG nodes: {neg_nodes}, fragmentation score: {frag_score:.3f}")
+    # https://networkx.org/documentation/stable/reference/functions.html
+    # run the functions from the above link instead of passing by Gephi
 
-    # KPP-POS: Maximize reach
-    pos_nodes, reach_score = kpp_pos(G, k=2)
-    print(f"KPP-POS nodes: {pos_nodes}, reachability: {reach_score}")
+    print("-------------------- BORGATTI GRAPH WITH COUNTRIES ----------------------")
+    filepath = 'C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/analysis/1.5_edges_verbose.csv'
+    G = nx.read_adjlist(filepath, comments='#', delimiter=',', create_using=None, nodetype=str, encoding='utf-8')
+
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+
+    nx.draw_networkx(G, ax=ax, with_labels=True, node_color='blue', edge_color='black', font_size=10)
+    plt.show()
+
+    for k in range(1, 10):
+        print(f"-------------------- k = {k} ----------------------")
+        # KPP-NEG: Disrupt network
+        neg_nodes, frag_score = kpp_neg(G, k=k)
+        print(f"KPP-NEG nodes: {neg_nodes}, fragmentation score: {frag_score:.3f}")
+        # KPP-POS: Maximize reach
+        pos_nodes, reach_score = kpp_pos(G, k=k)
+        print(f"KPP-POS nodes: {pos_nodes}, reachability: {reach_score}")
+
+
+
+    print("-------------------- BORGATTI GRAPH WITH REGIONS ----------------------")
+    filepath = 'C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/analysis/1.7_subregions_edges_only.csv'
+    G = nx.read_adjlist(filepath, comments='#', delimiter=',', create_using=None, nodetype=str, encoding='utf-8')
+
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+
+    nx.draw_networkx(G, ax=ax, with_labels=True, node_color='blue', edge_color='black', font_size=10)
+    plt.show()
+
+    for k in range(1, 10):
+        print(f"-------------------- k = {k} ----------------------")
+        # KPP-NEG: Disrupt network
+        neg_nodes, frag_score = kpp_neg(G, k=k)
+        print(f"KPP-NEG nodes: {neg_nodes}, fragmentation score: {frag_score:.3f}")
+        # KPP-POS: Maximize reach
+        pos_nodes, reach_score = kpp_pos(G, k=k)
+        print(f"KPP-POS nodes: {pos_nodes}, reachability: {reach_score}")

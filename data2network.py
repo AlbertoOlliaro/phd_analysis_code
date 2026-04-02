@@ -122,7 +122,7 @@ def construct_edges(indexed_df):
     return edges_df
 
 
-def transform2network(only_included_routes_data_file_path, output_dir, output_file_path):
+def transform2network(only_included_routes_data_file_path, output_file_path):
     """
     Produces an Excel file with two sheets.
     The first sheet contains the list of nodes (set of unique countries)
@@ -130,7 +130,6 @@ def transform2network(only_included_routes_data_file_path, output_dir, output_fi
 
     Args:
         only_included_routes_data_file_path:
-        output_dir:
         output_file_path:
 
     Returns:
@@ -150,6 +149,36 @@ def transform2network(only_included_routes_data_file_path, output_dir, output_fi
         edges_df.to_excel(writer, sheet_name="edges", index=False) # save edges on sheet 2 "edges"
 
     return [nodes_df, edges_df], timestamped_file_path
+
+
+def merge_edges(network_data_file_path, output_file_path):
+    """
+        Produces an Excel file with network data but merging edges, effectively setting all edges weight to 1;
+        The first sheet contains the list of nodes (set of unique countries)
+        and the second sheet the list of edges (now each pair will be unique).
+
+        Args:
+            network_data_file_path:
+            output_file_path:
+
+        Returns:
+            A paired node_df and edge_df, Path to the written Excel file
+        """
+    # retrieve nodes and edges (produced in previous step transform2network
+    nodes_df = pd.read_excel(network_data_file_path, sheet_name="nodes")
+    edges_df = pd.read_excel(network_data_file_path, sheet_name="edges")
+
+    # TODO : implement instead a function which before dropping aggregates the other values such as medical products and dates
+    #  https://stackoverflow.com/questions/50242968/check-for-duplicate-values-in-pandas-dataframe-column
+    new_edges_df = edges_df.drop_duplicates(subset=['Source', 'Target'], inplace=False)
+
+    timestamped_file_path = add_timestamp_to_filename(output_file_path)
+
+    with pd.ExcelWriter(timestamped_file_path, engine="openpyxl") as writer:
+        nodes_df.to_excel(writer, sheet_name="nodes", index=False)  # save nodes on sheet 1 "nodes"
+        new_edges_df.to_excel(writer, sheet_name="edges", index=False)  # save edges on sheet 2 "edges"
+
+    return [nodes_df, new_edges_df], timestamped_file_path
 
 
 def remove_self_loops(network_data_file_path, output_file_path):
@@ -200,30 +229,31 @@ def group_countries_into_region(network_data_file_path, country_to_region_dict_f
     edges_df = pd.read_excel(network_data_file_path, sheet_name="edges")
 
     if os.path.exists(country_to_region_dict_file_path):
-        print("🔄 Loading nodes as a geoID to country_ame dictionary...")
+        print("🔄 Loading dictionary 'nodes as a geoID to country_name' ...")
         geo_id_to_country_name_dict = nodes_df.set_index("ID")['country_name'].to_dict()
 
-        print("🔄 Loading country to m49 subregion dictionary...")
+        print("🔄 Loading dictionary 'country to m49 subregion' ...")
         country_to_region_dict_temp = pd.read_excel(country_to_region_dict_file_path, sheet_name=0)
         country_to_region_dict = country_to_region_dict_temp.set_index("country")['subregion_m49'].to_dict()
 
-        print("🔄 Loading subregion m49 IDs dictionary...")
+        print("🔄 Loading dictionary 'subregion m49 IDs' ...")
         region_to_feature_dict_temp = pd.read_excel(country_to_region_dict_file_path, sheet_name=1)
 
     else:
         print("📁 No dictionary found.")
         return None
 
-# therefore, need to use the m49 json dictionary, create a new nodes_df with those IDs and lat-lon, and then
     # process the edges
     # need to go have a look at the edges2matrix file and how I did it there
     new_edges_df = edges_df.copy()
     new_edges_df["Source"] = edges_df["Source"].map(geo_id_to_country_name_dict).map(country_to_region_dict)
     new_edges_df["Target"] = edges_df["Target"].map(geo_id_to_country_name_dict).map(country_to_region_dict)
 
+    # processing the nodes is simply replacing the country_nodes tables with the region_nodes tables
     new_nodes_df = region_to_feature_dict_temp.copy()
     new_nodes_df["ID"] = new_nodes_df["subregion_m49"]
     new_nodes_df.set_index("ID")
+
     # print("...Merging nodes strategy : summing variables")
     # sum the properties such as node category, origin, destination, manufacturing...?
 
@@ -233,4 +263,32 @@ def group_countries_into_region(network_data_file_path, country_to_region_dict_f
         new_nodes_df.to_excel(writer, sheet_name="nodes", index=False)  # save nodes on sheet 1 "nodes"
         new_edges_df.to_excel(writer, sheet_name="edges", index=False)  # save edges on sheet 2 "edges"
 
-    return [nodes_df, edges_df], timestamped_file_path
+    return [new_nodes_df, new_edges_df], timestamped_file_path
+
+
+def create_verbose_edgelist_network(nodes_edges, verbose_edgelist_output_file_path):
+    """
+    Produces an Excel file with one sheet.
+    with the list of edges with some additional information (what was traded and when).
+
+    Args:
+        nodes_edges: in the form of a pair of dataframes (nodes and edges) created in transform2network [nodes_df, edges_df]
+        verbose_edgelist_output_file_path:
+
+    Returns:
+        Path to the written Excel file
+    """
+
+    nodes_df = nodes_edges[0]
+    edges_df = nodes_edges[1]
+
+    # Build edges list with the country names instead of geoIDs
+    geo_id_to_country_name_dict = nodes_df.set_index("ID")['country_name'].to_dict()
+    edges_verbose_df = edges_df.copy()
+    edges_verbose_df["Source"] = edges_verbose_df["Source"].map(geo_id_to_country_name_dict)
+    edges_verbose_df["Target"] = edges_verbose_df["Target"].map(geo_id_to_country_name_dict)
+    verbose_edgelist_output_timestamped_file_path = add_timestamp_to_filename(verbose_edgelist_output_file_path)
+
+    edges_verbose_df.to_csv(verbose_edgelist_output_timestamped_file_path) # save edges on sheet 2 "edges"
+
+    return edges_verbose_df, verbose_edgelist_output_timestamped_file_path
