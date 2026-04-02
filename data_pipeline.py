@@ -96,7 +96,9 @@ if __name__ == "__main__":
         explo_analysis_results, latest_1_4_file_path  = run_exploratory_analysis(
             os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME),
             ANALYSIS_DIR,
-            os.path.join(ANALYSIS_DIR, DATA_CLEANED))
+            os.path.join(ANALYSIS_DIR, DATA_CLEANED),
+            os.path.join(ANALYSIS_DIR, EXPLORATORY_ANALYSIS_FILENAME),
+        )
         shutil.copy(latest_1_4_file_path, os.path.join(ANALYSIS_DIR, EXPLORATORY_ANALYSIS_FILENAME))
 
     # Step 0.3 to 1: transform data to network data in the form of nodes list and edges pairs =========================
