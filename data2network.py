@@ -222,7 +222,8 @@ def group_countries_into_region(network_data_file_path, country_to_region_dict_f
     new_edges_df["Target"] = edges_df["Target"].map(geo_id_to_country_name_dict).map(country_to_region_dict)
 
     new_nodes_df = region_to_feature_dict_temp.copy()
-    new_nodes_df.set_index("subregion_m49")
+    new_nodes_df["ID"] = new_nodes_df["subregion_m49"]
+    new_nodes_df.set_index("ID")
     # print("...Merging nodes strategy : summing variables")
     # sum the properties such as node category, origin, destination, manufacturing...?
 
