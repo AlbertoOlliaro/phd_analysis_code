@@ -10,101 +10,137 @@ from datetime import datetime
 # the edges table is a list of connections between locations with attributes such as time interval
 #     time interval according to https://gephi.org/users/supported-graph-formats/spreadsheet/
 
+country_node_attributes_col = ["geoname_country", "geoname_country_geoId", "geoname_country_lat", "geoname_country_lon", "geoname_countryCode"]
+adm1_node_attributes_col = ["geoname_ADM1", "geoname_ADM1_geoId", "geoname_ADM1_lat", "geoname_ADM1_lon"]
+adm2_node_attributes_col = ["geoname_ADM2", "geoname_ADM2_geoId", "geoname_ADM2_lat", "geoname_ADM2_lon"]
+adm3_node_attributes_col = ["geoname_ADM3", "geoname_ADM3_geoId", "geoname_ADM3_lat", "geoname_ADM3_lon"]
+
+
+def is_geoid_valid(geo_id):
+    return not (pd.isna(geo_id) or str(geo_id).strip() == "" or str(geo_id).strip().lower() == "world")
+
 def add_timestamp_to_filename(file_path):
     root, ext = os.path.splitext(file_path)
     return f"{root}_{datetime.now().strftime("%Y%m%d%H%M%S")}{ext}"
 
 
-def construct_nodes(indexed_df):
+# TODO remove the grouping functions from other places and instead use this zoom level "who" for who regions, or m49 for un m49 subregions etc etc
+def construct_nodes(indexed_df, zoom_level=0):
     """
     Constructs the list of nodes from the input dataframe as a dictionary table with columns:
     ID, lat, lon, country_name, country_geoId
     (for now, ID and country_geoId are the same)
     and returns it
     Args:
+
         indexed_df: dict keyed by mergeID where each value is a row dict
+        zoom_level: country 0 (by default), admin 1 2 3
 
     Returns: nodes_df (pandas.DataFrame)
 
     """
 
-    node_attributes_col = ["geoname_country", "geoname_country_geoId", "geoname_country_lat", "geoname_country_lon", "geoname_countryCode"]
     nodes_by_id = {}
 
+    zoom_level2attributes_dict = {
+        0: country_node_attributes_col,
+        1: adm1_node_attributes_col,
+        2: adm2_node_attributes_col,
+        3: adm3_node_attributes_col,
+    }
+
 # TODO use the "aux_geonames_ID_dictionary" file instead:
-    #  use the country geoID and name and lat lon columns only, make a set, done
+#  use the node actual geoId and use it to fetch EITHER teh country structure or the admin 1 2 3
     for loc in ["loc1", "loc2", "loc3", "loc4"]:
-        name_col = f"{loc} {node_attributes_col[0]}"
-        geo_id_col = f"{loc} {node_attributes_col[1]}"
-        lat_col = f"{loc} {node_attributes_col[2]}"
-        lon_col = f"{loc} {node_attributes_col[3]}"
-        country_code_col = f"{loc} {node_attributes_col[4]}"
-
         for _, row in indexed_df.items():
-            geo_id = row.get(geo_id_col)
-            if pd.isna(geo_id) or str(geo_id).strip() == "" or str(geo_id).strip().lower() == "world":
-                continue
+            current_zoom_level = zoom_level
+            geo_id = row.get(f"{loc} {zoom_level2attributes_dict[current_zoom_level][1]}")
 
-            node_id = str(int(float(geo_id))) if str(geo_id).strip().isdigit() or str(geo_id).replace(".", "", 1).isdigit() else str(geo_id).strip()
-            if node_id not in nodes_by_id:
-                # Fetch attributes (first occurrence wins)
-                country_name = row.get(name_col)
-                country_code = row.get(country_code_col)
-                lat = row.get(lat_col)
-                lon = row.get(lon_col)
+            # checks if the current zoom level is NOT the lowest level available
+            # go up one level and retry until you do
+            while not(is_geoid_valid(geo_id)):
+                if current_zoom_level > 0:
+                    current_zoom_level -= 1
+                    geo_id = row.get(f"{loc} {zoom_level2attributes_dict[current_zoom_level][1]}")
+                else:
+                    break # we're already at zoom level 0 and the id is still not valid (empty or World for instance)
+            # if the geoId exist/is valid
+            else:
+                node_id = str(int(float(geo_id))) if str(geo_id).strip().isdigit() or str(geo_id).replace(".", "", 1).isdigit() else str(geo_id).strip()
 
-                nodes_by_id[node_id] = {
-                    "ID": node_id,
-                    "lat": lat,
-                    "lon": lon,
-                    "country_name": None if pd.isna(country_name) else str(country_name),
-                    "country_geoId": node_id,
-                    "countryCode": country_code,
-                }
+                if node_id not in nodes_by_id:
+                    # column to value and into "node_X" format
+                    node_name = row.get(f"{loc} {zoom_level2attributes_dict[current_zoom_level][0]}")
+                    lat = row.get(f"{loc} {zoom_level2attributes_dict[current_zoom_level][2]}")
+                    lon = row.get(f"{loc} {zoom_level2attributes_dict[current_zoom_level][3]}")
+                    country_code = row.get(f"{loc} {"geoname_countryCode"}")
+                    country_name = row.get(f"{loc} {"geoname_country"}")
+
+                    nodes_by_id[node_id] = {
+                        "ID": node_id,
+                        "node_lat": lat,
+                        "node_lon": lon,
+                        "node_name": None if pd.isna(node_name) else str(node_name),
+                        "node_geoId": node_id,
+                        "node_countryCode": country_code,
+                        "node_country_name": country_name,
+                    }
 
     nodes_df = pd.DataFrame(list(nodes_by_id.values())).drop_duplicates(subset=["ID"]).reset_index(drop=True)
     return nodes_df
 
 
-def construct_edges(indexed_df):
+def construct_edges(indexed_df, zoom_level=0):
     """
     Construct the table of edges from the input dataframe with columns:
-    ID, Source, Target, Label
+    ID, Source, Target, Label, MedicalProduct, IncidentDate
     the ID is the mergeID of the route plus suffix of the route segment (i.e. _1, _2, _3)
 
     args: indexed_df
     Returns: edges_df
     """
 
-    edge_attributes_col = ["Medical Products", "incident date"]
-    edge_attributes_col_suffix = ["geoname_country", "geoname_country_geoId"]
-
     # loc 3 and/or 4 related columns might be empty
     # based on route length, there will be 1 2 or 3 edges with the same mergeID
     edges = []
+    zoom_level2attributes_dict = {
+        0: country_node_attributes_col,
+        1: adm1_node_attributes_col,
+        2: adm2_node_attributes_col,
+        3: adm3_node_attributes_col,
+    }
 
     for merge_id, row in indexed_df.items():
         # Build ordered list of stops with both country name and geoId, skipping empties
         stops = []
         for loc in ["loc1", "loc2", "loc3", "loc4"]:
-            name_col = f"{loc} {edge_attributes_col_suffix[0]}"
-            id_col = f"{loc} {edge_attributes_col_suffix[1]}"
-            name_val = row.get(name_col)
-            id_val = row.get(id_col)
-            if pd.isna(id_val) or str(id_val).strip() == "" or str(id_val).strip().lower() == "world":
-                continue
-            node_id = str(int(float(id_val))) if str(id_val).strip().isdigit() or str(id_val).replace(".", "", 1).isdigit() else str(id_val).strip()
-            stops.append({
-                "id": node_id,
-                "name": None if pd.isna(name_val) else str(name_val)
-            })
 
-        # Create edges between consecutive valid stops
-        if len(stops) < 2:
+            current_zoom_level = zoom_level
+            geo_id = row.get(f"{loc} {zoom_level2attributes_dict[current_zoom_level][1]}")
+            # checks if the current zoom level is NOT the lowest level available
+            # go up one level and retry until you do
+            while not (is_geoid_valid(geo_id)):
+                if current_zoom_level > 0:
+                    current_zoom_level -= 1
+                    geo_id = row.get(f"{loc} {zoom_level2attributes_dict[current_zoom_level][1]}")
+                else:
+                    break  # we're already at zoom level 0 and the id is still not valid (empty or World for instance)
+            # if the geoId exist/is valid
+            else:
+                name_val = row.get(f"{loc} {zoom_level2attributes_dict[current_zoom_level][0]}")
+                id_val = row.get(f"{loc} {zoom_level2attributes_dict[current_zoom_level][1]}")
+                node_id = str(int(float(id_val))) if str(id_val).strip().isdigit() or str(id_val).replace(".", "", 1).isdigit() else str(id_val).strip()
+                stops.append({
+                    "id": node_id,
+                    "name": None if pd.isna(name_val) else str(name_val)
+                })
+
+        # with all the locations parsed, we create edges between consecutive stops
+        if len(stops) < 2: # unless we couldn't find at least 2 locations
             continue
 
-        medical_products = row.get(edge_attributes_col[0])
-        incident_date = row.get(edge_attributes_col[1])
+        medical_products = row.get("Medical Products")
+        incident_date = row.get("incident date")
 
         for i in range(len(stops) - 1):
             src = stops[i]
@@ -114,15 +150,15 @@ def construct_edges(indexed_df):
                 "Source": src["id"],
                 "Target": tgt["id"],
                 "Label": f"{src['name']} -> {tgt['name']}" if src["name"] or tgt["name"] else "",
-                "Medical Products": None if pd.isna(medical_products) else str(medical_products),
-                "incident date": incident_date if (incident_date is None or not pd.isna(incident_date)) else None
+                "MedicalProducts": None if pd.isna(medical_products) else str(medical_products),
+                "IncidentDate": incident_date if (incident_date is None or not pd.isna(incident_date)) else None
             })
 
     edges_df = pd.DataFrame(edges).reset_index(drop=True)
     return edges_df
 
 
-def transform2network(only_included_routes_data_file_path, output_file_path):
+def transform2network(only_included_routes_data_file_path, output_file_path, zoom_level=0):
     """
     Produces an Excel file with two sheets.
     The first sheet contains the list of nodes (set of unique countries)
@@ -131,6 +167,7 @@ def transform2network(only_included_routes_data_file_path, output_file_path):
     Args:
         only_included_routes_data_file_path:
         output_file_path:
+        zoom_level (default is country) builds the edges using the corresponding level of source-target geoID as key
 
     Returns:
         Path to the written Excel file
@@ -140,8 +177,8 @@ def transform2network(only_included_routes_data_file_path, output_file_path):
     indexed_df = routes_df.set_index("mergeID").to_dict(orient="index")
 
     # Build nodes and edges
-    nodes_df = construct_nodes(indexed_df)
-    edges_df = construct_edges(indexed_df)
+    nodes_df = construct_nodes(indexed_df, zoom_level)
+    edges_df = construct_edges(indexed_df, zoom_level)
     timestamped_file_path = add_timestamp_to_filename(output_file_path)
 
     with pd.ExcelWriter(timestamped_file_path, engine="openpyxl") as writer:

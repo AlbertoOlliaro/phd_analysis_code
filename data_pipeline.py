@@ -37,6 +37,7 @@ NETWORK_STEP2_DATA_FILENAME = "step2_nodes_edges_weight1.xlsx"
 NETWORK_STEP3_DATA_FILENAME = "step3_nodes_edges_noloops.xlsx"
 NETWORK_VERBOSE_EDGELIST_DATA_FILENAME = "3.5_edges_verbose.csv"
 NETWORK_STEP4_DATA_FILENAME = "step4_nodes_subregions_edges.xlsx"
+NETWORK_STEP5_DATA_FILENAME = "step5_nodes_admin3_edges.xlsx"
 
 ## directory -----------------------------------------------------------------------------------------------------------
 ANALYSIS_DIR = "C:/Users/aolliaro/OneDrive - Nexus365/DPhil data and analysis/phd_analysis_data/"
@@ -63,7 +64,7 @@ if __name__ == "__main__":
     pre_testing()
 
     start_from_step = 1
-    end_step = 7
+    end_step = 8
 
     # Step 0.1 to 0.2: cleaning free text data and typos =============================================================
     def step01to02():
@@ -106,7 +107,8 @@ if __name__ == "__main__":
         print("Step 0.3 to 1: transform data to edges pairs...")
         network_data, network_nodes_edges_file_path = transform2network(
             os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME),
-            os.path.join(ANALYSIS_DIR, NETWORK_STEP1_DATA_FILENAME))
+            os.path.join(ANALYSIS_DIR, NETWORK_STEP1_DATA_FILENAME),
+            zoom_level=3)
         shutil.copy(network_nodes_edges_file_path, os.path.join(ANALYSIS_DIR, NETWORK_STEP1_DATA_FILENAME))
 
 
@@ -143,6 +145,16 @@ if __name__ == "__main__":
             os.path.join(ANALYSIS_DIR, NETWORK_STEP4_DATA_FILENAME))
         shutil.copy(network_nodes_edges_subregions_file_path, os.path.join(ANALYSIS_DIR, NETWORK_STEP4_DATA_FILENAME))
 
+    def step03to5():
+        print("Step 0.3 to 5: transform data to edges pairs of the lowest granular location available...")
+        network_data, network_nodes_edges_file_path = transform2network(
+            os.path.join(ANALYSIS_DIR, INCLUDED_DATA_WITH_LOCATIONS_FETCHED_FILENAME),
+            os.path.join(ANALYSIS_DIR, NETWORK_STEP5_DATA_FILENAME),
+            zoom_level=3)
+        shutil.copy(network_nodes_edges_file_path, os.path.join(ANALYSIS_DIR, NETWORK_STEP5_DATA_FILENAME))
+
+
+
 
     # sequence of the pipeline
     steps = {
@@ -152,9 +164,12 @@ if __name__ == "__main__":
         4: step03to1,
         5: step1to2,
         6: step2to3,
-        7: step3to4
+        7: step3to4,
+        8: step03to5
     }
 
     for step in range(start_from_step, end_step+1):
+        if step==3:
+            continue
         steps[step]()
 

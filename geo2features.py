@@ -14,6 +14,9 @@ GEONAME_DICTIONARY_FILE_PATH = ""
 
 test_geonameID = 7285904
 
+"""
+Loads the geonames local cached dictionary if it exists
+"""
 def prep_phase(data_file_path, geoname_dictionary_file_path):
 
     # Load data and filter by 'include'
@@ -55,7 +58,7 @@ def save_df_to_file(file_path, df):
 # queries geonames API to find location hierarchy and geonameID, lat, lon, of country
 def query_geonames_api(geoname_id):
     url = f"http://api.geonames.org/hierarchy?geonameId={geoname_id}&username={USERNAME}"
-    time.sleep(0.6)  # Throttle to stay under 1000/hour
+    time.sleep(0.1)  # Throttle to stay under 1000/hour
     response = requests.get(url)
 
     root = ET.fromstring(response.content)
@@ -81,10 +84,19 @@ def query_geonames_api(geoname_id):
             result["geoname_country_lon"] = geo_elements[1].findtext("lng")
             if len(geo_elements) >= 3:
                 result["ADM1"] = geo_elements[2].findtext("toponymName") # admin levels often indicate "region, district, state"
+                result["ADM1_geoId"] = geo_elements[2].findtext("geonameId")
+                result["ADM1_lat"] = geo_elements[2].findtext("lat")
+                result["ADM1_lon"] = geo_elements[2].findtext("lng")
                 if len(geo_elements) >= 4:
                     result["ADM2"] = geo_elements[3].findtext("toponymName") # which is helpful to understand the context
+                    result["ADM2_geoId"] = geo_elements[3].findtext("geonameId")
+                    result["ADM2_lat"] = geo_elements[3].findtext("lat")
+                    result["ADM2_lon"] = geo_elements[3].findtext("lng")
                     if len(geo_elements) >= 5:
                         result["ADM3"] = geo_elements[4].findtext("toponymName") # especially on visual/graph/diagrams
+                        result["ADM3_geoId"] = geo_elements[4].findtext("geonameId")
+                        result["ADM3_lat"] = geo_elements[4].findtext("lat")
+                        result["ADM3_lon"] = geo_elements[4].findtext("lng")
 
     return result
 
@@ -145,8 +157,18 @@ def process_all_locations(data_file_path, geoname_dictionary_file_path, output_f
             ("geoname_country_lat", "geoname_country_geoId"),
             ("geoname_country_lon", "geoname_country_lat"),
             ("geoname_ADM1", "geoname_country_lon"),
-            ("geoname_ADM2", "geoname_ADM1"),
-            ("geoname_ADM3", "geoname_ADM2"),
+            ("geoname_ADM1_geoId", "geoname_ADM1"),
+            ("geoname_ADM1_lat", "geoname_ADM1_geoId"),
+            ("geoname_ADM1_lon", "geoname_ADM1_lat"),
+            ("geoname_ADM2", "geoname_ADM1_lon"),
+            ("geoname_ADM2_geoId", "geoname_ADM2"),
+            ("geoname_ADM2_lat", "geoname_ADM2_geoId"),
+            ("geoname_ADM2_lon", "geoname_ADM2_lat"),
+            ("geoname_ADM3", "geoname_ADM2_lon"),
+            ("geoname_ADM3_geoId", "geoname_ADM3"),
+            ("geoname_ADM3_lat", "geoname_ADM3_geoId"),
+            ("geoname_ADM3_lon", "geoname_ADM3_lat"),
+
         ]
 
         # Create empty columns in the correct order (makes visual reading and debugging easier)
@@ -171,8 +193,17 @@ def process_all_locations(data_file_path, geoname_dictionary_file_path, output_f
             df[f"{loc} geoname_country_lon"] = df[geoname_id_col].apply(
                 lambda x: get_geonames_data(x, geonames_dict_cache).get("geoname_country_lon"))
             df[f"{loc} geoname_ADM1"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM1"))
+            df[f"{loc} geoname_ADM1_geoId"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM1_geoId"))
+            df[f"{loc} geoname_ADM1_lat"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM1_lat"))
+            df[f"{loc} geoname_ADM1_lon"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM1_lon"))
             df[f"{loc} geoname_ADM2"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM2"))
+            df[f"{loc} geoname_ADM2_geoId"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM2_geoId"))
+            df[f"{loc} geoname_ADM2_lat"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM2_lat"))
+            df[f"{loc} geoname_ADM2_lon"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM2_lon"))
             df[f"{loc} geoname_ADM3"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM3"))
+            df[f"{loc} geoname_ADM3_geoId"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM3_geoId"))
+            df[f"{loc} geoname_ADM3_lat"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM3_lat"))
+            df[f"{loc} geoname_ADM3_lon"] = df[geoname_id_col].apply(lambda x: get_geonames_data(x, geonames_dict_cache).get("ADM3_lon"))
         except RuntimeError:
             print("⛔ Process halted due to API limit.")
             break
@@ -188,7 +219,7 @@ def test_query_geonames_api():
     calling http://api.geonames.org/hierarchy?geonameId=7285904&username=albertoolliaro
     """
     result_hierarchy = ["Europe", "Switzerland", "Canton de Genève", "Geneva", "Genthod",
-                        "2658434", "47.00016", "8.01427", "CH"]
+                        "2658434", "47.00016", "8.01427", "CH", "2660645", "6458783", "7285904", "46.19673", "46.20804", "46.26642"]
     # Arrange
     api_result = query_geonames_api(test_geonameID)
 
@@ -198,6 +229,12 @@ def test_query_geonames_api():
     admin1 = api_result.get("ADM1")
     admin2 = api_result.get("ADM2")
     admin3 = api_result.get("ADM3")
+    admin1_geoid = api_result.get("ADM1_geoId")
+    admin2_geoid = api_result.get("ADM2_geoId")
+    admin3_geoid = api_result.get("ADM3_geoId")
+    admin1_lat = api_result.get("ADM1_lat")
+    admin2_lat = api_result.get("ADM2_lat")
+    admin3_lat = api_result.get("ADM3_lat")
     country_geoid = api_result.get("geoname_country_geoId")
     country_lat = api_result.get("geoname_country_lat")
     country_lon = api_result.get("geoname_country_lon")
@@ -212,4 +249,12 @@ def test_query_geonames_api():
     assert result_hierarchy[6] == country_lat, f"Test failed! Expected '{result_hierarchy[6]}', but got '{country_lat}'."
     assert result_hierarchy[7] == country_lon, f"Test failed! Expected '{result_hierarchy[7]}', but got '{country_lon}'."
     assert result_hierarchy[8] == country_code, f"Test failed! Expected '{result_hierarchy[8]}', but got '{country_code}'."
+    assert result_hierarchy[9] == admin1_geoid, f"Test failed! Expected '{result_hierarchy[9]}', but got '{admin1_geoid}'."
+    assert result_hierarchy[10] == admin2_geoid, f"Test failed! Expected '{result_hierarchy[10]}', but got '{admin2_geoid}'."
+    assert result_hierarchy[11] == admin3_geoid, f"Test failed! Expected '{result_hierarchy[11]}', but got '{admin3_geoid}'."
+    assert result_hierarchy[12] == admin1_lat, f"Test failed! Expected '{result_hierarchy[12]}', but got '{admin1_lat}'."
+    assert result_hierarchy[13] == admin2_lat, f"Test failed! Expected '{result_hierarchy[13]}', but got '{admin2_lat}'."
+    assert result_hierarchy[14] == admin3_lat, f"Test failed! Expected '{result_hierarchy[14]}', but got '{admin3_lat}'."
 
+if __name__ == "__main__":
+    test_query_geonames_api()
